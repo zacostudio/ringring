@@ -150,6 +150,10 @@ else
 fi
 
 export MACOSX_DEPLOYMENT_TARGET="$DEPLOYMENT_TARGET"
+# rustc writes the absolute path of every source file into the binary (panic locations).
+# That path holds the builder's home folder, so the account name would ship. Remap both roots.
+# The separator is 0x1f, so a path with a space still works.
+export CARGO_ENCODED_RUSTFLAGS="--remap-path-prefix=$HOME=/home"$'\x1f'"--remap-path-prefix=$PROJECT_DIR=/ringring"
 
 # ── 5. Dry run stops here ────────────────────────────────────────────────────
 
