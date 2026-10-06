@@ -28,8 +28,58 @@ pub(crate) fn make_nonactivating(window: &WebviewWindow) {
 			window.label()
 		),
 	}
-	#[cfg(not(target_os = "macos"))]
+	#[cfg(windows)]
+	if let Err(e) = frameless::install(window) {
+		log::warn!(
+			"[panel] '{}' may show a title bar when it gets the keyboard: {e}",
+			window.label()
+		);
+	}
+	#[cfg(not(any(target_os = "macos", windows)))]
 	let _ = window;
+}
+
+/// 링 창이 제목 줄을 그리지 않게 한다.
+///
+/// 창이 활성화되거나 비활성화될 때 Windows 의 기본 처리(`DefWindowProc` 의 `WM_NCACTIVATE`)는 제목 줄을 다시
+/// 그린다. 꾸밈 없는 창에서는 그 그림이 창 위쪽에 옛 모양의 제목 줄로 나타난다 (실측 — 짧게 눌러 링이
+/// 키보드를 받는 순간). tao 의 창 처리 앞에 끼어들어 그 그리기만 막는다. 메시지는 tao 로 그대로 넘어간다.
+#[cfg(windows)]
+mod frameless {
+	use tauri::WebviewWindow;
+	use windows_sys::Win32::Foundation::{HWND, LPARAM, LRESULT, WPARAM};
+	use windows_sys::Win32::UI::Shell::{DefSubclassProc, SetWindowSubclass};
+	use windows_sys::Win32::UI::WindowsAndMessaging::{WM_NCACTIVATE, WM_NCPAINT};
+
+	/// 이 subclass 의 id. 같은 창에 두 번 걸어도 하나다.
+	const SUBCLASS_ID: usize = 0x5249_4e47;
+
+	unsafe extern "system" fn proc(
+		hwnd: HWND,
+		msg: u32,
+		wparam: WPARAM,
+		lparam: LPARAM,
+		_id: usize,
+		_data: usize,
+	) -> LRESULT {
+		match msg {
+			// `lparam` 이 -1 이면 기본 처리가 제목 줄을 다시 그리지 않는다.
+			WM_NCACTIVATE => unsafe { DefSubclassProc(hwnd, msg, wparam, -1) },
+			// 창 전체가 client 영역이다. 그릴 non-client 영역이 없다.
+			WM_NCPAINT => 0,
+			_ => unsafe { DefSubclassProc(hwnd, msg, wparam, lparam) },
+		}
+	}
+
+	/// 창을 만든 thread(main thread)에서 부른다.
+	pub(super) fn install(window: &WebviewWindow) -> Result<(), String> {
+		let hwnd = window.hwnd().map_err(|e| e.to_string())?;
+		// SAFETY: `proc` 은 static 함수이고 창이 부서질 때 Windows 가 subclass 를 같이 걷는다.
+		if unsafe { SetWindowSubclass(hwnd.0, Some(proc), SUBCLASS_ID, 0) } == 0 {
+			return Err("SetWindowSubclass failed".to_string());
+		}
+		Ok(())
+	}
 }
 
 /// 창에 키보드 포커스를 준다. panel 이면 앱을 활성화하지 않는다 — 맨 앞 앱은 그대로다. panel 이 아니면
