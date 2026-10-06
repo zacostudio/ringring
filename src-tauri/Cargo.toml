@@ -1,6 +1,6 @@
 [package]
 name = "ringring"
-version = "0.1.1"
+version = "0.1.2"
 description = "RingRing — a ring menu around the cursor"
 authors = ["zacostudio"]
 license = "MIT"
