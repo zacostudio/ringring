@@ -20,6 +20,7 @@ All notable changes to RingRing are recorded here. The format follows Keep a Cha
 - Storage in one SQLite file with migrations from version 1. Log file under `~/Library/Logs/<identifier>/RingRing.log`. Single instance.
 - `scripts/build.sh <version>`: Developer ID signed, hardened-runtime, notarized and stapled build for Apple Silicon, with `--dry-run`.
 - Development-only HTTP control surface (`dev-agent` feature, `RINGRING_DEV_AGENT=1`).
+- README shows screenshots of the ring and the settings window (`assets/screenshots/`).
 
 ### Changed
 

@@ -4,6 +4,24 @@
 
 어느 앱 위에서든 단축키를 누르면 커서 자리에 둥근 메뉴가 뜹니다. 칸 쪽으로 움직이고 키를 놓으면 그 칸이 실행됩니다.
 
+## 화면
+
+<img src="assets/screenshots/ring.png" width="640" alt="커서 자리에 뜬 링">
+
+단축키를 누르면 커서 자리에 링이 뜹니다.
+
+<img src="assets/screenshots/ring-highlight.png" width="640" alt="칸 하나가 골라진 링">
+
+커서를 옮기면 그쪽 칸이 골라집니다. 키를 놓으면 그 칸이 실행됩니다.
+
+<img src="assets/screenshots/settings-dark.png" width="700" alt="설정 창의 링 편집 화면, 어두운 테마">
+
+설정 창의 링 편집 화면입니다. 링 그림에서 칸을 고르고 오른쪽에서 할 일을 정합니다.
+
+<img src="assets/screenshots/settings-light.png" width="700" alt="설정 창의 링 편집 화면, 밝은 테마">
+
+밝은 테마의 같은 화면입니다.
+
 ## 쓰는 법
 
 링을 여는 방법은 두 가지입니다.
