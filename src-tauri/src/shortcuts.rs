@@ -288,7 +288,15 @@ impl Registrar for Os<'_> {
 }
 
 fn on_main_thread() -> bool {
-	objc2::MainThreadMarker::new().is_some()
+	#[cfg(target_os = "macos")]
+	{
+		objc2::MainThreadMarker::new().is_some()
+	}
+	// 다른 OS 에는 main thread 를 묻는 싼 방법이 없다. 확인을 건너뛴다.
+	#[cfg(not(target_os = "macos"))]
+	{
+		true
+	}
 }
 
 /// 등록을 지금 상태에 맞춘다. **main thread 에서만 부른다** — 파일 머리의 설명을 본다.

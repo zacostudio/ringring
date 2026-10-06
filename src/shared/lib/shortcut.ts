@@ -36,6 +36,12 @@ const CODE_SYMBOL: Record<string, string> = {
 	Escape: "⎋"
 };
 
+/**
+ * macOS 의 webview 인가. 수식키의 이름과 표기가 OS 마다 다르다 — macOS 는 기호(⌘⌥)를 쓰고
+ * 다른 OS 는 이름(Ctrl+Alt)을 쓴다.
+ */
+export const IS_MAC = typeof navigator !== "undefined" && /Mac/.test(navigator.userAgent);
+
 const MODIFIER_SYMBOL: Record<string, string> = {
 	CmdOrCtrl: "⌘",
 	Cmd: "⌘",
@@ -47,6 +53,20 @@ const MODIFIER_SYMBOL: Record<string, string> = {
 	Alt: "⌥",
 	Option: "⌥",
 	Shift: "⇧"
+};
+
+/** macOS 밖의 표기. `CmdOrCtrl` 은 거기서 Ctrl 이고, `Super` 는 Windows 키다. */
+const MODIFIER_NAME: Record<string, string> = {
+	CmdOrCtrl: "Ctrl",
+	Cmd: "Win",
+	Command: "Win",
+	Super: "Win",
+	Meta: "Win",
+	Ctrl: "Ctrl",
+	Control: "Ctrl",
+	Alt: "Alt",
+	Option: "Alt",
+	Shift: "Shift"
 };
 
 /** 키 이벤트에서 읽는 것. `KeyboardEvent` 가 이 모양이다. */
@@ -68,11 +88,13 @@ export function isModifierOnly(chord: KeyChord): boolean {
  *
  * `key` 가 아니라 `code` 로 만든다. macOS 에서 ⌥ 는 찍히는 글자를 바꾼다 — ⌥⇧G 의 `key` 는 `˝` 다.
  * `code` 는 물리 키라 수식키와 자판 배열에 영향받지 않는다.
+ *
+ * meta 키는 macOS 에서 `CmdOrCtrl`(⌘) 이다. 다른 OS 에서 `CmdOrCtrl` 은 Ctrl 이므로 `Super` 로 적는다.
  */
-export function chordToShortcut(chord: KeyChord): string | null {
+export function chordToShortcut(chord: KeyChord, mac = IS_MAC): string | null {
 	if (!ACCEPTED_CODE.test(chord.code)) return null;
 	const parts: string[] = [];
-	if (chord.metaKey) parts.push("CmdOrCtrl");
+	if (chord.metaKey) parts.push(mac ? "CmdOrCtrl" : "Super");
 	if (chord.ctrlKey) parts.push("Ctrl");
 	if (chord.altKey) parts.push("Alt");
 	if (chord.shiftKey) parts.push("Shift");
@@ -90,15 +112,20 @@ function formatKey(token: string): string {
 }
 
 /** 저장된 조합을 화면에 보일 조각들로 바꾼다. `CmdOrCtrl+Shift+KeyG` → `["⌘", "⇧", "G"]`. */
-export function shortcutParts(shortcut: string): string[] {
+export function shortcutParts(shortcut: string, mac = IS_MAC): string[] {
+	const modifiers = mac ? MODIFIER_SYMBOL : MODIFIER_NAME;
 	return shortcut
 		.split("+")
 		.filter(Boolean)
-		.map((token) => MODIFIER_SYMBOL[token] ?? formatKey(token));
+		.map((token) => modifiers[token] ?? formatKey(token));
 }
 
-/** 저장된 조합을 한 줄로. `⌘⇧G`. 수식키는 붙여 쓰고, 이름이 긴 키만 띄운다. */
-export function formatShortcut(shortcut: string): string {
-	const parts = shortcutParts(shortcut);
+/**
+ * 저장된 조합을 한 줄로. `⌘⇧G`. 수식키는 붙여 쓰고, 이름이 긴 키만 띄운다.
+ * macOS 밖에서는 `Ctrl+Shift+G` 다.
+ */
+export function formatShortcut(shortcut: string, mac = IS_MAC): string {
+	const parts = shortcutParts(shortcut, mac);
+	if (!mac) return parts.join("+");
 	return parts.map((part, index) => (part.length > 1 && index > 0 ? ` ${part}` : part)).join("");
 }

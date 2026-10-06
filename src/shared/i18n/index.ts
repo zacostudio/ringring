@@ -4,7 +4,7 @@ import { createStore } from "../lib/externalStore";
 import { en } from "./en";
 import { ja } from "./ja";
 import { ko } from "./ko";
-import { type Dictionary, type Locale, type Translate, translate } from "./translate";
+import { type Dictionary, type Locale, platformKey, type Translate, translate } from "./translate";
 
 export type { Locale, Translate } from "./translate";
 
@@ -32,5 +32,8 @@ export function useLocale(): Locale {
 /** 지금 언어의 번역 함수. 언어가 바뀌면 다시 그린다. */
 export function useT(): Translate {
 	const locale = useLocale();
-	return useCallback((key, vars) => translate(DICTIONARIES[locale], key, vars), [locale]);
+	return useCallback(
+		(key, vars) => translate(DICTIONARIES[locale], platformKey(DICTIONARIES[locale], key), vars),
+		[locale]
+	);
 }

@@ -116,7 +116,68 @@ mod os {
 	}
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(windows)]
+mod os {
+	use windows_sys::Win32::UI::Input::KeyboardAndMouse::{
+		INPUT, INPUT_0, INPUT_KEYBOARD, KEYBDINPUT, KEYEVENTF_KEYUP, SendInput, VK_CONTROL,
+		VK_LWIN, VK_MENU, VK_SHIFT,
+	};
+
+	use super::platform;
+
+	/// Windows 에는 손쉬운 사용 같은 권한이 없다. 관리자 권한으로 도는 앱만 입력을 받지 않는다 (UIPI).
+	pub(super) fn trusted() -> bool {
+		true
+	}
+
+	fn key(vk: u16, up: bool) -> INPUT {
+		INPUT {
+			r#type: INPUT_KEYBOARD,
+			Anonymous: INPUT_0 {
+				ki: KEYBDINPUT {
+					wVk: vk,
+					wScan: 0,
+					dwFlags: if up { KEYEVENTF_KEYUP } else { 0 },
+					time: 0,
+					dwExtraInfo: 0,
+				},
+			},
+		}
+	}
+
+	/// 수식키를 누르고, 키를 눌렀다 떼고, 수식키를 거꾸로 뗀다. 한 번의 `SendInput` 이라 다른 입력이 끼지 않는다.
+	pub(super) fn post_key(code: u16, flags: u64) {
+		let modifiers: Vec<u16> = [
+			(platform::FLAG_CONTROL, VK_CONTROL),
+			(platform::FLAG_ALTERNATE, VK_MENU),
+			(platform::FLAG_SHIFT, VK_SHIFT),
+			(platform::FLAG_COMMAND, VK_LWIN),
+		]
+		.into_iter()
+		.filter(|(flag, _)| flags & flag != 0)
+		.map(|(_, vk)| vk)
+		.collect();
+		let mut inputs: Vec<INPUT> = modifiers.iter().map(|&vk| key(vk, false)).collect();
+		inputs.push(key(code, false));
+		inputs.push(key(code, true));
+		inputs.extend(modifiers.iter().rev().map(|&vk| key(vk, true)));
+		let sent = unsafe {
+			SendInput(
+				inputs.len() as u32,
+				inputs.as_ptr(),
+				std::mem::size_of::<INPUT>() as i32,
+			)
+		};
+		if sent as usize != inputs.len() {
+			log::warn!(
+				"[keystroke] the system took {sent} of {} key events",
+				inputs.len()
+			);
+		}
+	}
+}
+
+#[cfg(not(any(target_os = "macos", windows)))]
 mod os {
 	pub(super) fn trusted() -> bool {
 		false
@@ -133,8 +194,13 @@ mod tests {
 	fn stored_combos_parse_in_order() {
 		let parsed = parse(&["Cmd+KeyC".to_string(), "Cmd+Shift+Digit4".to_string()]).unwrap();
 		assert_eq!(parsed.len(), 2);
-		assert_eq!(platform::keycode(parsed[0].key), Some(0x08));
-		assert_eq!(platform::keycode(parsed[1].key), Some(0x15));
+		let (key_c, digit_4) = if cfg!(windows) {
+			(0x43, 0x34)
+		} else {
+			(0x08, 0x15)
+		};
+		assert_eq!(platform::keycode(parsed[0].key), Some(key_c));
+		assert_eq!(platform::keycode(parsed[1].key), Some(digit_4));
 	}
 
 	#[test]

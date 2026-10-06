@@ -89,6 +89,11 @@ pub fn run() {
 	// 켜는 것만으로 앞에 나올 이유가 없다. 설정 창은 열 때 스스로 앞으로 온다 (`settings_window::reveal`).
 	#[cfg(target_os = "macos")]
 	let builder = builder.activate_ignoring_other_apps(false);
+	// 앱 메뉴는 macOS 의 메뉴 막대에 산다. 다른 OS 에서는 창마다 메뉴 줄이 붙으므로 달지 않는다.
+	#[cfg(target_os = "macos")]
+	let builder = builder
+		.menu(ui::app_menu::build)
+		.on_menu_event(|app, event| ui::app_menu::on_menu_event(app, event.id().as_ref()));
 	let app = builder
 		// 첫 plugin 이어야 한다. 둘째 실행은 여기서 끝나고, 먼저 떠 있던 쪽이 설정 창을 연다.
 		.plugin(tauri_plugin_single_instance::init(|app, _args, _cwd| {
@@ -99,8 +104,6 @@ pub fn run() {
 		.plugin(tauri_plugin_dialog::init())
 		.plugin(tauri_plugin_opener::init())
 		.plugin(tauri_plugin_notification::init())
-		.menu(ui::app_menu::build)
-		.on_menu_event(|app, event| ui::app_menu::on_menu_event(app, event.id().as_ref()))
 		.invoke_handler(tauri::generate_handler![
 			commands::rings::rings_list,
 			commands::rings::ring_create,

@@ -185,7 +185,8 @@ mod tests {
 	fn dead_zone_selects_nothing() {
 		for count in MIN_SLOTS..=MAX_SLOTS {
 			assert_eq!(hit(0.0, 0.0, count).slot, None);
-			let (dx, dy) = at(45.0, DEAD_ZONE_RADIUS);
+			// 축 위의 점이다. 비스듬한 점은 sin·cos 의 반올림으로 거리가 반지름을 조금 넘을 수 있다.
+			let (dx, dy) = (DEAD_ZONE_RADIUS, 0.0);
 			assert_eq!(hit(dx, dy, count).slot, None, "on the dead zone edge");
 			let (dx, dy) = at(45.0, DEAD_ZONE_RADIUS + 0.5);
 			assert!(

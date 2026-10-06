@@ -19,9 +19,12 @@ pub struct LoginItemState {
 const STATUS_ENABLED: isize = 1;
 const STATUS_REQUIRES_APPROVAL: isize = 2;
 
-/// 시스템 설정의 로그인 항목 화면.
-pub const LOGIN_ITEMS_SETTINGS_URL: &str =
-	"x-apple.systempreferences:com.apple.LoginItems-Settings.extension";
+/// 시스템 설정의 로그인 항목 화면. Windows 는 설정의 시작 앱 화면이다.
+pub const LOGIN_ITEMS_SETTINGS_URL: &str = if cfg!(windows) {
+	"ms-settings:startupapps"
+} else {
+	"x-apple.systempreferences:com.apple.LoginItems-Settings.extension"
+};
 
 fn state_of(status: isize, available: bool) -> LoginItemState {
 	LoginItemState {
@@ -105,7 +108,95 @@ mod os {
 	}
 }
 
-#[cfg(not(target_os = "macos"))]
+// Windows 는 `HKCU\…\Run` 의 값 하나다. 값이 이 실행 파일을 가리키면 켜진 것이다.
+#[cfg(windows)]
+mod os {
+	use std::os::windows::ffi::OsStrExt;
+
+	use windows_sys::Win32::Foundation::ERROR_FILE_NOT_FOUND;
+	use windows_sys::Win32::System::Registry::{
+		HKEY_CURRENT_USER, REG_SZ, RRF_RT_REG_SZ, RegDeleteKeyValueW, RegGetValueW, RegSetKeyValueW,
+	};
+
+	const RUN_KEY: &str = r"Software\Microsoft\Windows\CurrentVersion\Run";
+	const VALUE_NAME: &str = "RingRing";
+
+	fn wide(text: &str) -> Vec<u16> {
+		text.encode_utf16().chain(std::iter::once(0)).collect()
+	}
+
+	/// 따옴표로 싼 이 실행 파일의 경로. 끝에 NUL 이 붙는다.
+	fn command() -> Option<Vec<u16>> {
+		let exe = std::env::current_exe().ok()?;
+		Some(
+			std::iter::once(u16::from(b'"'))
+				.chain(exe.as_os_str().encode_wide())
+				.chain([u16::from(b'"'), 0])
+				.collect(),
+		)
+	}
+
+	fn registered() -> Option<Vec<u16>> {
+		let mut buf = vec![0u16; 1024];
+		let mut bytes = (buf.len() * 2) as u32;
+		let status = unsafe {
+			RegGetValueW(
+				HKEY_CURRENT_USER,
+				wide(RUN_KEY).as_ptr(),
+				wide(VALUE_NAME).as_ptr(),
+				RRF_RT_REG_SZ,
+				std::ptr::null_mut(),
+				buf.as_mut_ptr().cast(),
+				&mut bytes,
+			)
+		};
+		(status == 0).then(|| {
+			buf.truncate(bytes as usize / 2);
+			buf
+		})
+	}
+
+	pub(super) fn status() -> Option<isize> {
+		let command = command()?;
+		Some(if registered().is_some_and(|value| value == command) {
+			super::STATUS_ENABLED
+		} else {
+			0
+		})
+	}
+
+	pub(super) fn set(enabled: bool) -> Result<(), String> {
+		let status = if enabled {
+			let command = command().ok_or("The path of this app is not readable")?;
+			unsafe {
+				RegSetKeyValueW(
+					HKEY_CURRENT_USER,
+					wide(RUN_KEY).as_ptr(),
+					wide(VALUE_NAME).as_ptr(),
+					REG_SZ,
+					command.as_ptr().cast(),
+					(command.len() * 2) as u32,
+				)
+			}
+		} else {
+			unsafe {
+				RegDeleteKeyValueW(
+					HKEY_CURRENT_USER,
+					wide(RUN_KEY).as_ptr(),
+					wide(VALUE_NAME).as_ptr(),
+				)
+			}
+		};
+		match status {
+			0 => Ok(()),
+			// 이미 없는 값을 지우는 것은 실패가 아니다.
+			ERROR_FILE_NOT_FOUND if !enabled => Ok(()),
+			code => Err(std::io::Error::from_raw_os_error(code as i32).to_string()),
+		}
+	}
+}
+
+#[cfg(not(any(target_os = "macos", windows)))]
 mod os {
 	pub(super) fn status() -> Option<isize> {
 		None

@@ -3,13 +3,16 @@
 :root {
 	color-scheme: light dark;
 
-	--font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Apple SD Gothic Neo", "Hiragino Sans", sans-serif;
-	--font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+	--font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Apple SD Gothic Neo", "Hiragino Sans", "Segoe UI", "Malgun Gothic", "Yu Gothic UI", sans-serif;
+	--font-mono: ui-monospace, "SF Mono", Menlo, "Cascadia Mono", Consolas, monospace;
 
 	/* 글자 크기는 셋뿐이다. 본문, 덧붙이는 글, 페이지 제목. */
 	--text-body: 13px;
 	--text-meta: 12px;
 	--text-title: 18px;
+
+	/* 창 위쪽에 비우는 자리. macOS 는 제목 줄이 없어 창 단추와 끄는 띠가 여기 온다. */
+	--window-top: 48px;
 
 	--control-h: 28px;
 	--radius: 7px;
@@ -35,6 +38,11 @@
 	--warn: #a86a12;
 
 	--ring-surface: rgba(251, 251, 250, 0.97);
+}
+
+/* macOS 밖의 창은 OS 의 제목 줄을 그대로 쓴다. 위쪽을 넓게 비우지 않는다. */
+:root[data-os="other"] {
+	--window-top: 20px;
 }
 
 @media (prefers-color-scheme: dark) {

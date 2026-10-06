@@ -287,9 +287,14 @@ mod tests {
 	#[tokio::test(flavor = "current_thread")]
 	async fn a_slow_notification_does_not_delay_a_shell_time_limit() {
 		let started = Instant::now();
+		let (shell, command) = if cfg!(windows) {
+			(login_shell(), "ping -n 6 127.0.0.1 >nul")
+		} else {
+			(std::path::PathBuf::from("/bin/sh"), "sleep 5")
+		};
 		let job = ShellJob {
-			shell: std::path::PathBuf::from("/bin/sh"),
-			command: "sleep 5".to_string(),
+			shell,
+			command: command.to_string(),
 			folder: std::env::temp_dir(),
 			timeout: Duration::from_secs(1),
 		};

@@ -194,8 +194,18 @@ pub fn ring_limits() -> Limits {
 
 /// 링 id 로 링을 띄운다. 짧게 누른 것과 같은 상태다 — 클릭이나 키로 고른다.
 ///
-/// async 가 아니다 — Tauri 는 sync command 를 main thread 에서 돌리고, 창을 올리는 일은 main thread 에서 한다.
+/// 창을 올리는 일은 main thread 에서 한다. sync command 로 곧바로 하지 않고 main thread 의 queue 에 넣는다 —
+/// Windows 에서 sync command 는 WebView2 의 callback 안에서 돌고, 거기서 링 창(새 webview)을 만들면
+/// 서로 기다리다 멈춘다.
 #[tauri::command]
-pub fn ring_show(app: AppHandle, ring_id: String) -> Result<(), CommandError> {
-	Ok(controller::show_open(&app, &ring_id, None, true)?)
+pub async fn ring_show(app: AppHandle, ring_id: String) -> Result<(), CommandError> {
+	let (tx, rx) = tokio::sync::oneshot::channel();
+	let handle = app.clone();
+	app.run_on_main_thread(move || {
+		let _ = tx.send(controller::show_open(&handle, &ring_id, None, true));
+	})
+	.map_err(|e| CommandError::failed(e.to_string()))?;
+	Ok(rx
+		.await
+		.map_err(|e| CommandError::failed(e.to_string()))??)
 }

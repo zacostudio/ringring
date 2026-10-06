@@ -146,11 +146,13 @@ pub fn open(app: &AppHandle, page: Option<&str>) {
 			.title("RingRing")
 			.inner_size(1000.0, 660.0)
 			.min_inner_size(900.0, 580.0)
-			.title_bar_style(tauri::TitleBarStyle::Overlay)
-			.hidden_title(true)
-			.traffic_light_position(tauri::LogicalPosition::new(18.0, 20.0))
 			.visible(false)
 			.center();
+	#[cfg(target_os = "macos")]
+	let builder = builder
+		.title_bar_style(tauri::TitleBarStyle::Overlay)
+		.hidden_title(true)
+		.traffic_light_position(tauri::LogicalPosition::new(18.0, 20.0));
 	// wry 는 webview 를 붙일 때 앱을 활성화한다. 조용한 개발 확인에서는 그 활성화를 건너뛴다.
 	let built = if dev_quiet() {
 		crate::ui::panel::build(builder)

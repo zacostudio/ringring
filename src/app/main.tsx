@@ -4,11 +4,13 @@ import { createRoot } from "react-dom/client";
 import { startAppState } from "@/entities/AppState";
 import { RingPage } from "@/pages/RingPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { IS_MAC } from "@/shared/lib/shortcut";
 import { currentWindowLabel } from "@/shared/tauri/ipc";
 import "./global.css";
 
 const isRing = currentWindowLabel() === "ring";
 document.documentElement.dataset.window = isRing ? "ring" : "settings";
+document.documentElement.dataset.os = IS_MAC ? "mac" : "other";
 
 // 언어와 테마는 Rust 가 정한다. 창마다 한 번 읽고, 바뀔 때마다 따라간다.
 void startAppState();

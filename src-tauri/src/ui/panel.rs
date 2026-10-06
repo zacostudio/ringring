@@ -39,7 +39,35 @@ pub(crate) fn focus(window: &WebviewWindow) -> Result<(), String> {
 	if macos::is_panel(window) {
 		return macos::make_key(window);
 	}
+	// tao 의 `set_focus` 는 자기가 보인 창에만 듣는다. 링 창은 `place_and_front` 가 직접 보이므로 여기서도
+	// 직접 앞으로 가져온다.
+	#[cfg(windows)]
+	{
+		use windows_sys::Win32::UI::WindowsAndMessaging::SetForegroundWindow;
+		let hwnd = window.hwnd().map_err(|e| e.to_string())?;
+		if unsafe { SetForegroundWindow(hwnd.0) } == 0 {
+			return Err("Windows did not let the window come to the foreground".to_string());
+		}
+		Ok(())
+	}
+	#[cfg(not(windows))]
 	window.set_focus().map_err(|e| e.to_string())
+}
+
+/// [`place_and_front`] 로 보인 창을 숨긴다.
+pub(crate) fn hide(window: &WebviewWindow) -> Result<(), String> {
+	// tao 는 자기가 보이지 않은 창을 이미 숨은 것으로 알아 `hide()` 가 아무 일도 하지 않는다.
+	#[cfg(windows)]
+	{
+		use windows_sys::Win32::UI::WindowsAndMessaging::{SW_HIDE, ShowWindow};
+		let hwnd = window.hwnd().map_err(|e| e.to_string())?;
+		unsafe {
+			ShowWindow(hwnd.0, SW_HIDE);
+		}
+		Ok(())
+	}
+	#[cfg(not(windows))]
+	window.hide().map_err(|e| e.to_string())
 }
 
 /// 창을 화면의 `(x, y)` 로 옮기고 다른 앱의 창 위로 올린다. **key 는 주지 않는다** — 키보드는 맨 앞 앱에
@@ -54,7 +82,39 @@ pub(crate) fn place_and_front(window: &WebviewWindow, x: f64, y: f64) -> Result<
 	{
 		macos::place_and_front(window, x, y)
 	}
-	#[cfg(not(target_os = "macos"))]
+	// 한 번의 `SetWindowPos` 로 옮기고 맨 위에 보인다. `SWP_NOACTIVATE` 라 맨 앞 창은 그대로다 —
+	// Tauri 의 `show()` 는 창을 활성화한다.
+	#[cfg(windows)]
+	{
+		use windows_sys::Win32::UI::WindowsAndMessaging::{
+			GWL_STYLE, GetWindowLongW, HWND_TOPMOST, SWP_FRAMECHANGED, SWP_NOACTIVATE, SWP_NOSIZE,
+			SWP_SHOWWINDOW, SetWindowLongW, SetWindowPos, WS_CAPTION, WS_MAXIMIZEBOX,
+			WS_MINIMIZEBOX, WS_POPUP, WS_SYSMENU, WS_THICKFRAME,
+		};
+		let hwnd = window.hwnd().map_err(|e| e.to_string())?;
+		let (x, y) = crate::ring::platform::to_physical(x, y);
+		let placed = unsafe {
+			// tao 는 꾸밈 없는 창에도 `WS_CAPTION` 을 남긴다. 투명한 창이 비활성일 때 DWM 이 그 제목 줄을
+			// 비쳐 그린다 (실측). tao 가 숨길 때마다 스타일을 되돌리므로 보일 때마다 뗀다.
+			let frame = WS_CAPTION | WS_THICKFRAME | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX;
+			let style = GetWindowLongW(hwnd.0, GWL_STYLE) as u32;
+			SetWindowLongW(hwnd.0, GWL_STYLE, ((style & !frame) | WS_POPUP) as i32);
+			SetWindowPos(
+				hwnd.0,
+				HWND_TOPMOST,
+				x,
+				y,
+				0,
+				0,
+				SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_FRAMECHANGED,
+			)
+		};
+		if placed == 0 {
+			return Err(std::io::Error::last_os_error().to_string());
+		}
+		Ok(())
+	}
+	#[cfg(not(any(target_os = "macos", windows)))]
 	{
 		window
 			.set_position(tauri::LogicalPosition::new(x, y))

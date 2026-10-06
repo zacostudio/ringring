@@ -197,5 +197,16 @@ export const en: Dictionary = {
 	"refusal.import_unreadable": "This is not a file exported by RingRing.",
 	"refusal.import_version_unsupported": "This file was made by a newer version of RingRing.",
 	"refusal.import_too_large": "The file holds too many rings.",
-	"refusal.import_empty": "The file holds no rings."
+	"refusal.import_empty": "The file holds no rings.",
+
+	// Sentences shown instead outside macOS (Windows). Each replaces the key without `other:` (`useT`).
+	"other:welcome.starterHint": "The starter ring holds File Explorer, Edge, Terminal, Notepad and the Downloads folder. You can change all of it later.",
+	"other:welcome.sample.finder": "File Explorer",
+	"other:welcome.sample.browser": "Edge",
+	"other:ring.refusedNote": "Not registered: Windows refused this combination. Another app may hold it. Choose another one.",
+	"other:open.fileHint": "A file opens in its default app. A folder opens in File Explorer.",
+	"other:permissions.lead": "RingRing needs no extra permission on Windows.",
+	"other:permissions.how": "Apps running as administrator do not receive the keystrokes RingRing sends.",
+	"other:refusal.shortcut_needs_modifier": "Hold Ctrl, Alt or Win with it, so the shortcut does not swallow typing.",
+	"other:refusal.shortcut_unavailable": "Windows did not accept that combination. Another app may be using it."
 };

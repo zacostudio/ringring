@@ -1,6 +1,6 @@
 # 링링이 (RingRing)
 
-커서 주위에 뜨는 링 메뉴입니다. macOS 메뉴 막대에 사는 작은 앱입니다.
+커서 주위에 뜨는 링 메뉴입니다. macOS 의 메뉴 막대와 Windows 의 트레이에 사는 작은 앱입니다.
 
 어느 앱 위에서든 단축키를 누르면 커서 자리에 둥근 메뉴가 뜹니다. 칸 쪽으로 움직이고 키를 놓으면 그 칸이 실행됩니다.
 
@@ -21,6 +21,13 @@
 <img src="assets/screenshots/settings-light.png" width="700" alt="설정 창의 링 편집 화면, 밝은 테마">
 
 밝은 테마의 같은 화면입니다.
+
+## 설치
+
+- **macOS** (13 이상, Apple Silicon): 릴리스에 `.dmg` 가 있으면 그것을 엽니다. 없으면 아래대로 소스에서 빌드합니다.
+- **Windows** (10·11, x64): 릴리스의 `RingRing_<버전>_x64-setup.exe` 를 실행합니다. 서명하지 않은 설치 파일이라 SmartScreen 이 한 번 묻습니다 — "추가 정보" 를 누르고 "실행" 을 고릅니다.
+
+아래 글은 macOS 를 기준으로 적었습니다. Windows 에서 다른 점은 [Windows 에서](#windows-에서) 에 모았습니다.
 
 ## 쓰는 법
 
@@ -96,7 +103,7 @@ OS 입력 없이 화면을 확인할 때는 개발용 HTTP 제어 서버(dev-age
 RINGRING_DEV_AGENT=1 RINGRING_DEV_QUIET=1 bun run tauri:dev -- --features dev-agent
 ```
 
-## 릴리스 빌드
+## 릴리스 빌드 (macOS)
 
 ```
 ./scripts/build.sh <버전>            # 서명, notarization, staple 까지
@@ -116,6 +123,46 @@ RINGRING_DEV_AGENT=1 RINGRING_DEV_QUIET=1 bun run tauri:dev -- --features dev-ag
 셸 설정에 두기 싫으면 `scripts/build.local.sh` 에 `export 이름=값` 줄을 적어 둡니다. 스크립트가 그 파일을 읽습니다. 이 파일은 `.gitignore` 에 있습니다. 커밋하지 마세요.
 
 결과물은 `release/<버전>/` 에 생깁니다. 스크립트는 커밋·태그·업로드를 하지 않습니다.
+
+## Windows 에서
+
+같은 코드가 Windows 10·11 (x64) 에서도 돕니다. macOS 와 다른 점은 다음과 같습니다.
+
+- **아이콘.** 작업 표시줄의 알림 영역(트레이)에 생깁니다. 안 보이면 `^` 를 눌러 숨은 아이콘을 봅니다. 메뉴는 macOS 의 메뉴 막대 메뉴와 같습니다.
+- **단축키.** `Ctrl+Alt+G` 처럼 이름으로 보입니다. Windows 키가 든 조합은 Windows 가 먼저 가져가는 것이 많습니다. `Alt+Space` 는 창 메뉴를 여는 키라 피하는 것이 좋습니다.
+- **셸 명령.** `cmd` 로 돕니다 (`%ComSpec% /C`). 여러 줄로 적으면 줄을 `&` 로 이어 차례로 돌립니다. 출력은 UTF-8 로 읽습니다. PowerShell 을 쓰려면 `powershell -NoProfile -Command "…"` 로 적습니다.
+- **백그라운드 작업.** 실행은 `cmd` 가 끝날 때 끝납니다. `start notepad` 처럼 띄워 둔 프로그램은 그대로 남습니다. 제한 시간을 넘기면 그 명령이 띄운 프로세스를 모두 끝냅니다.
+- **키 입력.** 권한 없이 됩니다. "권한" 페이지에 할 일이 없습니다. 관리자 권한으로 도는 앱은 그 입력을 받지 않습니다.
+- **앱 고르기.** `.exe` 나 시작 메뉴의 바로 가기를 고릅니다.
+- **파일·폴더 고르기.** 고르는 창은 파일만 고릅니다. 폴더는 경로를 적습니다 (`~\Downloads` 도 됩니다).
+- **로그인할 때 실행.** 레지스트리의 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` 에 적습니다. 관리자 권한이 필요 없습니다.
+- **기본 링.** 파일 탐색기, Edge, 터미널, 메모장, 다운로드 폴더가 들어갑니다.
+- **데이터와 로그.** 링은 `%APPDATA%\com.zacostudio.ringring\ringring.db` 에, 로그는 `%LOCALAPPDATA%\com.zacostudio.ringring\logs\RingRing.log` 에 있습니다.
+
+### Windows 에서 빌드하기
+
+필요한 것은 다음과 같습니다.
+
+- [Bun](https://bun.sh)
+- Rust 1.98.1 (`rust-toolchain.toml` 이 맞춰 줍니다) 과 Visual Studio 의 "C++ 를 사용한 데스크톱 개발" 빌드 도구
+- Tauri CLI 2.12 이상 (`cargo install tauri-cli --locked`). 낡은 CLI 는 설정 파일을 읽지 못합니다. 깔지 않고 `bunx @tauri-apps/cli@2` 로 돌려도 됩니다
+- WebView2 런타임 (Windows 11 에는 들어 있습니다)
+
+```
+bun install
+bun tauri:dev                     # 개발 빌드
+bunx @tauri-apps/cli@2 build      # 릴리스 빌드와 NSIS 설치 파일. 서명하지 않습니다
+```
+
+`cargo tauri` 가 낡았으면 개발 빌드도 `bunx @tauri-apps/cli@2 dev --config src-tauri/tauri.dev.conf.json` 으로 돌립니다. 설치 파일은 `src-tauri/target/release/bundle/nsis/` 에 생깁니다.
+
+```
+bun run typecheck
+bun test src/
+cd src-tauri && cargo test
+```
+
+dev-agent 와 `scripts/build.sh` 는 macOS 에서만 됩니다. `bun run lint` 는 줄 끝이 LF 일 때 통과합니다 — git 이 CRLF 로 꺼냈으면 `bunx biome lint src` 로 규칙만 봅니다.
 
 ## 라이선스
 

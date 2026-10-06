@@ -48,8 +48,45 @@ pub async fn choose(
 	}
 	#[cfg(not(target_os = "macos"))]
 	{
-		let _ = (window, options);
-		Err("choosing a path is only implemented on macOS".to_string())
+		other::choose(window, options).await
+	}
+}
+
+// macOS 밖에서는 dialog plugin 을 쓴다. 파일과 폴더를 한 창에서 고를 수 없어 파일을 고른다 — 폴더는
+// 칸에 경로를 적는다.
+#[cfg(not(target_os = "macos"))]
+mod other {
+	use tauri::{Manager, WebviewWindow};
+	use tauri_plugin_dialog::DialogExt;
+
+	use super::PanelOptions;
+
+	pub(super) async fn choose(
+		window: &WebviewWindow,
+		options: PanelOptions,
+	) -> Result<Option<String>, String> {
+		let mut dialog = window.app_handle().dialog().file().set_parent(window);
+		if !options.directories {
+			// 앱을 고르는 창이다. 시작 메뉴에서 시작한다 — 깔린 앱의 바로 가기가 거기 모여 있다.
+			dialog = dialog.add_filter("Apps", &["exe", "lnk"]);
+			if let Some(programs) = std::env::var_os("ProgramData") {
+				dialog = dialog.set_directory(
+					std::path::Path::new(&programs).join(r"Microsoft\Windows\Start Menu\Programs"),
+				);
+			}
+		}
+		let (tx, rx) = tokio::sync::oneshot::channel();
+		dialog.pick_file(move |path| {
+			let _ = tx.send(path);
+		});
+		let picked = rx.await.map_err(|e| e.to_string())?;
+		picked
+			.map(|path| {
+				path.into_path()
+					.map(|path| path.to_string_lossy().into_owned())
+					.map_err(|e| e.to_string())
+			})
+			.transpose()
 	}
 }
 

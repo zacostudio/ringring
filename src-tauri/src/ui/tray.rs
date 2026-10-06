@@ -25,8 +25,28 @@ const MAX_RING_ITEMS: usize = 12;
 const ICON: &[u8] = include_bytes!("../../icons/tray.png");
 const ICON_PAUSED: &[u8] = include_bytes!("../../icons/tray-paused.png");
 
+#[cfg(not(windows))]
 fn icon(paused: bool) -> tauri::Result<Image<'static>> {
 	Image::from_bytes(if paused { ICON_PAUSED } else { ICON })
+}
+
+/// Windows 에는 template 아이콘이 없다 — 검은 그림은 어두운 작업 표시줄에서 보이지 않는다. 앱 아이콘을 쓰고,
+/// 일시 정지는 색을 빼고 흐리게 해서 나타낸다.
+#[cfg(windows)]
+fn icon(paused: bool) -> tauri::Result<Image<'static>> {
+	let _ = (ICON, ICON_PAUSED);
+	let image = Image::from_bytes(include_bytes!("../../icons/32x32.png"))?;
+	if !paused {
+		return Ok(image);
+	}
+	let mut rgba = image.rgba().to_vec();
+	for pixel in rgba.chunks_exact_mut(4) {
+		let grey =
+			((u32::from(pixel[0]) * 3 + u32::from(pixel[1]) * 6 + u32::from(pixel[2])) / 10) as u8;
+		pixel[..3].fill(grey);
+		pixel[3] /= 2;
+	}
+	Ok(Image::new_owned(rgba, image.width(), image.height()))
 }
 
 /// 지금 상태로 메뉴를 만든다.

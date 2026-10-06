@@ -7,7 +7,7 @@ export const Root = styled.nav`
     width: 212px;
     flex-shrink: 0;
     /* 위쪽 48px 는 창 단추의 자리다. */
-    padding: 48px 10px 12px;
+    padding: var(--window-top) 10px 12px;
     background: var(--bg-side);
 `;
 

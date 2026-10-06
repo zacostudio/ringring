@@ -6,7 +6,7 @@ import { RING_REFUSAL_CODES } from "../../entities/Ring/lib/refusal";
 import { en } from "./en";
 import { ja } from "./ja";
 import { ko } from "./ko";
-import { translate } from "./translate";
+import { platformKey, translate } from "./translate";
 
 const SRC = path.resolve(import.meta.dir, "../..");
 
@@ -42,6 +42,14 @@ describe("dictionaries", () => {
 		for (const key of Object.keys(ko)) {
 			expect(placeholders(en[key]), key).toEqual(placeholders(ko[key]));
 			expect(placeholders(ja[key]), key).toEqual(placeholders(ko[key]));
+		}
+	});
+
+	test("every sentence for other systems replaces one that exists", () => {
+		for (const key of Object.keys(ko).filter((candidate) => candidate.startsWith("other:"))) {
+			expect(key.slice("other:".length) in ko, key).toBe(true);
+			expect(platformKey(ko, key.slice("other:".length), false), key).toBe(key);
+			expect(platformKey(ko, key.slice("other:".length), true), key).not.toBe(key);
 		}
 	});
 

@@ -12,7 +12,7 @@ export const Main = styled.main`
     min-width: 0;
     overflow-y: auto;
     /* 위쪽 48px 는 창을 끄는 자리다. 왼쪽 줄의 첫 글과 본문의 제목이 같은 높이에서 시작한다. */
-    padding: 48px 36px 36px;
+    padding: var(--window-top) 36px 36px;
 `;
 
 /* 창을 끌 수 있는 위쪽 띠. 제목 줄이 없는 창이다. */
@@ -22,4 +22,9 @@ export const DragStrip = styled.div`
     left: 0;
     right: 0;
     height: 44px;
+
+    /* macOS 밖에서는 OS 의 제목 줄로 끈다. 띠를 두면 위로 올라온 본문의 단추를 덮는다. */
+    html[data-os="other"] & {
+        display: none;
+    }
 `;

@@ -92,6 +92,13 @@ pub fn starter_slot_name(key: &str, locale: Locale) -> &'static str {
 	match (key, locale) {
 		("finder", _) => "Finder",
 		("safari", _) => "Safari",
+		("explorer", Locale::Ko) => "파일 탐색기",
+		("explorer", Locale::En) => "File Explorer",
+		("explorer", Locale::Ja) => "エクスプローラー",
+		("edge", _) => "Edge",
+		("notepad", Locale::Ko) => "메모장",
+		("notepad", Locale::En) => "Notepad",
+		("notepad", Locale::Ja) => "メモ帳",
 		("terminal", Locale::Ko) => "터미널",
 		("terminal", Locale::En) => "Terminal",
 		("terminal", Locale::Ja) => "ターミナル",
@@ -130,17 +137,40 @@ pub fn sub_ring_empty(locale: Locale) -> &'static str {
 	}
 }
 
+/// 글에 적는 OS 의 이름.
+#[cfg(windows)]
+macro_rules! os_name {
+	() => {
+		"Windows"
+	};
+}
+#[cfg(not(windows))]
+macro_rules! os_name {
+	() => {
+		"macOS"
+	};
+}
+
 /// 저장된 단축키를 OS 가 받지 않았다. 실행 기록에 링의 이름과 함께 남는다.
 pub fn shortcut_refused(locale: Locale) -> &'static str {
 	match locale {
 		Locale::Ko => {
-			"macOS 가 이 링의 단축키를 등록하지 않았습니다. 다른 앱이 쓰는 조합일 수 있습니다. 설정에서 다른 조합을 고르세요."
+			concat!(
+				os_name!(),
+				" 가 이 링의 단축키를 등록하지 않았습니다. 다른 앱이 쓰는 조합일 수 있습니다. 설정에서 다른 조합을 고르세요."
+			)
 		}
 		Locale::En => {
-			"macOS did not register this ring's shortcut. Another app may hold the combination. Choose another one in Settings."
+			concat!(
+				os_name!(),
+				" did not register this ring's shortcut. Another app may hold the combination. Choose another one in Settings."
+			)
 		}
 		Locale::Ja => {
-			"macOS がこのリングのショートカットを登録しませんでした。他のアプリが使っている可能性があります。設定で別の組み合わせを選んでください。"
+			concat!(
+				os_name!(),
+				" がこのリングのショートカットを登録しませんでした。他のアプリが使っている可能性があります。設定で別の組み合わせを選んでください。"
+			)
 		}
 	}
 }
@@ -241,6 +271,9 @@ mod tests {
 		for key in [
 			"finder",
 			"safari",
+			"explorer",
+			"edge",
+			"notepad",
 			"terminal",
 			"system_settings",
 			"downloads",

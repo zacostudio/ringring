@@ -13,6 +13,41 @@ struct Candidate {
 	path: &'static str,
 }
 
+#[cfg(windows)]
+const CANDIDATES: [Candidate; 5] = [
+	Candidate {
+		key: "explorer",
+		icon: "folder",
+		target: OpenTarget::App,
+		path: r"C:\Windows\explorer.exe",
+	},
+	Candidate {
+		key: "edge",
+		icon: "compass",
+		target: OpenTarget::App,
+		path: r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
+	},
+	Candidate {
+		key: "terminal",
+		icon: "square-terminal",
+		target: OpenTarget::App,
+		path: r"C:\Windows\System32\cmd.exe",
+	},
+	Candidate {
+		key: "notepad",
+		icon: "file-text",
+		target: OpenTarget::App,
+		path: r"C:\Windows\System32\notepad.exe",
+	},
+	Candidate {
+		key: "downloads",
+		icon: "download",
+		target: OpenTarget::File,
+		path: "~/Downloads",
+	},
+];
+
+#[cfg(not(windows))]
 const CANDIDATES: [Candidate; 5] = [
 	Candidate {
 		key: "finder",
@@ -86,12 +121,16 @@ mod tests {
 	#[test]
 	fn missing_targets_are_left_out_and_positions_stay_packed() {
 		let some = slots(Locale::En, |path| {
-			!path.to_string_lossy().contains("Safari")
+			let path = path.to_string_lossy();
+			!path.contains("Safari") && !path.contains("msedge")
 		});
 		assert_eq!(some.len(), CANDIDATES.len() - 1);
 		let positions: Vec<usize> = some.iter().map(|slot| slot.position).collect();
 		assert_eq!(positions, (0..some.len()).collect::<Vec<_>>());
-		assert!(some.iter().all(|slot| slot.label != "Safari"));
+		assert!(
+			some.iter()
+				.all(|slot| slot.label != "Safari" && slot.label != "Edge")
+		);
 	}
 
 	#[test]

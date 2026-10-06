@@ -201,5 +201,16 @@ export const ja: Dictionary = {
 	"refusal.import_unreadable": "RingRing が書き出したファイルではありません。",
 	"refusal.import_version_unsupported": "より新しいバージョンの RingRing が作ったファイルです。",
 	"refusal.import_too_large": "ファイルのリングが多すぎます。",
-	"refusal.import_empty": "ファイルにリングがありません。"
+	"refusal.import_empty": "ファイルにリングがありません。",
+
+	// macOS 以外 (Windows) で代わりに表示する文。`other:` を除いた key の代わりに使う (`useT`)。
+	"other:welcome.starterHint": "スターターリングにはエクスプローラー、Edge、ターミナル、メモ帳、ダウンロードフォルダが入ります。あとですべて変更できます。",
+	"other:welcome.sample.finder": "エクスプローラー",
+	"other:welcome.sample.browser": "Edge",
+	"other:ring.refusedNote": "未登録: Windows がこの組み合わせを受け付けませんでした。他のアプリが使っている可能性があります。別の組み合わせを選んでください。",
+	"other:open.fileHint": "ファイルはデフォルトのアプリで開きます。フォルダはエクスプローラーで開きます。",
+	"other:permissions.lead": "Windows では、別に受ける権限はありません。",
+	"other:permissions.how": "管理者として実行中のアプリは、RingRing が送るキー入力を受け取りません。",
+	"other:refusal.shortcut_needs_modifier": "Ctrl、Alt、Win のどれかを一緒に押してください。文字入力を奪わないためです。",
+	"other:refusal.shortcut_unavailable": "Windows がこの組み合わせを受け付けませんでした。ほかのアプリが使っている可能性があります。"
 };

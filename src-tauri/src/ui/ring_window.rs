@@ -77,7 +77,7 @@ pub(crate) fn show_at(window: &WebviewWindow, center_x: f64, center_y: f64) -> R
 
 pub(crate) fn hide(app: &AppHandle) {
 	if let Some(window) = app.get_webview_window(window_labels::RING) {
-		if let Err(e) = window.hide() {
+		if let Err(e) = crate::ui::panel::hide(&window) {
 			log::warn!("[ring] failed to hide the window: {e}");
 		}
 	}
