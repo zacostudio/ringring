@@ -4,6 +4,8 @@ All notable changes to RingRing are recorded here. The format follows Keep a Cha
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-10-06
+
 ### Added
 
 - An "open app" slot can pass arguments to the app. The field sits under the app chooser. On macOS they are split on spaces (quotes keep one together) and reach the app only when it is started, not when it is already running. On Windows the text is passed as written, and shortcuts and batch files take it too. A slot without arguments opens as before.
