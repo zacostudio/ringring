@@ -18,7 +18,7 @@ All notable changes to RingRing are recorded here. The format follows Keep a Cha
 - Text typed in Settings is saved before leaving: another slot, ring or page, closing the window, or quitting. Text that cannot be saved keeps the window open and shows the reason with "Discard input".
 - The confirm prompt shows when a long command continues below.
 - Storage in one SQLite file with migrations from version 1. Log file under `~/Library/Logs/<identifier>/RingRing.log`. Single instance.
-- `scripts/build.sh <version>`: Developer ID signed, hardened-runtime, notarized and stapled build for Apple Silicon, with `--dry-run`.
+- `scripts/build.sh <version>`: release build for Apple Silicon (`.app` and `.dmg`, not signed, not notarized), with `--dry-run`.
 - Development-only HTTP control surface (`dev-agent` feature, `RINGRING_DEV_AGENT=1`).
 - README shows screenshots of the ring and the settings window (`assets/screenshots/`).
 - Windows build. The ring shows at the cursor without taking focus; shell commands run through `cmd` and a timeout ends the whole process tree; keystrokes go through `SendInput`; launch at login uses the `HKCU` Run key; the icon lives in the notification area; shortcuts read as `Ctrl+Alt+G`; the starter ring holds File Explorer, Edge, Terminal, Notepad and Downloads; an NSIS installer target.

@@ -106,21 +106,12 @@ RINGRING_DEV_AGENT=1 RINGRING_DEV_QUIET=1 bun run tauri:dev -- --features dev-ag
 ## 릴리스 빌드 (macOS)
 
 ```
-./scripts/build.sh <버전>            # 서명, notarization, staple 까지
-./scripts/build.sh <버전> --dry-run  # 검사와 릴리스 컴파일만. 서명하지 않습니다
+./scripts/build.sh <버전>            # 검사, 버전 반영, .app 과 .dmg 만들기
+./scripts/build.sh <버전> --dry-run  # 검사와 릴리스 컴파일만. 번들과 버전 파일은 건드리지 않습니다
 ./scripts/build.sh <버전> --smoke    # 개발 identifier 와 dev-agent 를 넣은 릴리스 컴파일. 릴리스 모드의 화면을 확인할 때 씁니다
 ```
 
-서명과 notarization 에 쓰는 값은 환경 변수로만 받습니다. 저장소에는 들어 있지 않습니다. 하나라도 없으면 스크립트가 그 이름을 알리고 멈춥니다.
-
-| 변수 | 무엇 |
-| --- | --- |
-| `APPLE_SIGNING_IDENTITY` | Developer ID Application 인증서의 이름. `Developer ID Application: Your Name (TEAMID)` 꼴입니다 |
-| `APPLE_ID` | notarization 에 쓰는 Apple ID |
-| `APPLE_PASSWORD` | 그 Apple ID 의 앱 암호 |
-| `APPLE_TEAM_ID` | team id |
-
-셸 설정에 두기 싫으면 `scripts/build.local.sh` 에 `export 이름=값` 줄을 적어 둡니다. 스크립트가 그 파일을 읽습니다. 이 파일은 `.gitignore` 에 있습니다. 커밋하지 마세요.
+Apple 계정이나 인증서는 필요 없습니다. 앱에 Developer ID 서명과 notarization 을 하지 않습니다. 그래서 내려받은 사본은 처음 열 때 Gatekeeper 가 막습니다.
 
 결과물은 `release/<버전>/` 에 생깁니다. 스크립트는 커밋·태그·업로드를 하지 않습니다.
 

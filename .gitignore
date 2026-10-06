@@ -6,8 +6,7 @@ target/
 src-tauri/target/
 src-tauri/gen/
 
-# local secrets — signing and notarization values never belong in the repository
-scripts/build.local.sh
+# local secrets
 .env*
 *.p12
 *.pem
