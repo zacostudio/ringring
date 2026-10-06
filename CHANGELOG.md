@@ -4,6 +4,8 @@ All notable changes to RingRing are recorded here. The format follows Keep a Cha
 
 ## [Unreleased]
 
+## [0.1.0] - 2026-10-06
+
 ### Added
 
 - Ring menu around the cursor: hold a ring's global shortcut, move toward a slot and release to run it; tap the shortcut to keep the ring open and pick with a click, a number key, or arrows and Enter.
