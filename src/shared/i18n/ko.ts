@@ -81,6 +81,10 @@ export const ko: Dictionary = {
 	"open.target.url": "웹 주소",
 	"open.chooseApp": "앱 고르기…",
 	"open.chooseFile": "파일·폴더 고르기…",
+	"open.args": "인자",
+	"open.argsPlaceholder": "없음",
+	"open.argsHint":
+		"앱을 띄울 때 넘기는 인자입니다. 빈칸으로 나누고, 빈칸이 든 인자는 따옴표로 묶습니다. 이미 떠 있는 앱은 인자를 받지 않습니다.",
 	"open.fileHint": "파일은 기본 앱으로 열립니다. 폴더는 Finder 에서 열립니다.",
 	"open.urlHint": "http:// 나 https:// 로 시작하는 주소만 엽니다.",
 
@@ -223,5 +227,7 @@ export const ko: Dictionary = {
 	"other:general.openLoginItems": "시작 앱 설정 열기",
 	"other:backup.lead": "링을 파일 하나로 옮깁니다. 다른 PC 로 옮기거나 따로 보관할 때 씁니다.",
 	"other:about.storage": "링과 설정은 이 PC 에만 저장합니다. 밖으로 보내는 것은 없습니다.",
-	"other:open.chooseFile": "파일 고르기…"
+	"other:open.chooseFile": "파일 고르기…",
+	"other:open.argsHint":
+		"프로그램을 띄울 때 넘기는 인자입니다. 적은 그대로 넘어갑니다. 빈칸이 든 인자는 따옴표로 묶습니다."
 };

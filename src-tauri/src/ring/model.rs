@@ -205,6 +205,9 @@ pub enum RingAction {
 	Open {
 		target: OpenTarget,
 		value: String,
+		/// 앱에 넘기는 인자. 한 줄의 글이고 `target` 이 앱일 때만 쓴다. 없으면 JSON 에 싣지 않는다.
+		#[serde(default, skip_serializing_if = "String::is_empty")]
+		args: String,
 	},
 	Shell {
 		command: String,
@@ -234,7 +237,7 @@ impl RingAction {
 	/// 이 동작만 보고 알 수 있는 검증. 하위 링의 순환·깊이는 다른 링을 읽어야 하므로 [`check_link`] 가 본다.
 	pub fn validate(&self) -> Result<(), Refusal> {
 		match self {
-			Self::Open { target, value } => {
+			Self::Open { target, value, .. } => {
 				let value = value.trim();
 				if value.is_empty() {
 					return Err(Refusal::OpenValueMissing);
@@ -279,6 +282,43 @@ impl RingAction {
 	pub fn asks_confirm(&self) -> bool {
 		!KINDS_WITHOUT_CONFIRM.contains(&self.kind())
 	}
+}
+
+/// 인자 글을 인자들로 나눈다. 빈칸에서 나누고, 따옴표(`"` 나 `'`) 안의 빈칸은 나누지 않는다.
+///
+/// `\` 는 뜻이 없는 보통 글자다 — Windows 의 경로에 그대로 쓴다. 닫지 않은 따옴표는 글 끝까지다.
+// Windows 는 인자 글을 나누지 않고 그대로 넘긴다 (`exec/launch.rs`). 거기서는 테스트만 이 함수를 쓴다.
+#[cfg_attr(windows, allow(dead_code))]
+pub fn split_args(text: &str) -> Vec<String> {
+	let mut args = Vec::new();
+	let mut current = String::new();
+	// 빈 따옴표(`""`)도 인자 하나다.
+	let mut started = false;
+	let mut quote: Option<char> = None;
+	for c in text.chars() {
+		match quote {
+			Some(q) if c == q => quote = None,
+			Some(_) => current.push(c),
+			None if c == '"' || c == '\'' => {
+				quote = Some(c);
+				started = true;
+			}
+			None if c.is_whitespace() => {
+				if started {
+					args.push(std::mem::take(&mut current));
+					started = false;
+				}
+			}
+			None => {
+				current.push(c);
+				started = true;
+			}
+		}
+	}
+	if started {
+		args.push(current);
+	}
+	args
 }
 
 /// "실행 전에 확인" 이 기본으로 켜지는 동작 종류. 셸 명령만이다.
@@ -490,6 +530,7 @@ mod tests {
 		let action = RingAction::Open {
 			target: OpenTarget::Url,
 			value: "https://example.com".to_string(),
+			args: String::new(),
 		};
 		let json = serde_json::to_value(&action).unwrap();
 		assert_eq!(
@@ -511,11 +552,45 @@ mod tests {
 	}
 
 	#[test]
+	fn app_arguments_ride_in_the_json_only_when_there_are_some() {
+		let action = RingAction::Open {
+			target: OpenTarget::App,
+			value: "/Applications/Safari.app".to_string(),
+			args: "--new-window https://example.com".to_string(),
+		};
+		let json = serde_json::to_value(&action).unwrap();
+		assert_eq!(json["args"], "--new-window https://example.com");
+		assert_eq!(serde_json::from_value::<RingAction>(json).unwrap(), action);
+		// 인자가 생기기 전에 저장된 칸은 `args` 가 없다.
+		let old = serde_json::json!({"kind": "open", "target": "app", "value": "/a.app"});
+		assert!(matches!(
+			serde_json::from_value::<RingAction>(old).unwrap(),
+			RingAction::Open { args, .. } if args.is_empty()
+		));
+	}
+
+	#[test]
+	fn arguments_split_on_blanks_outside_quotes() {
+		assert_eq!(split_args(""), Vec::<String>::new());
+		assert_eq!(split_args("  -n   --flag=1 "), ["-n", "--flag=1"]);
+		assert_eq!(
+			split_args(r#"--profile "Work Stuff" 'a b' c"d e"f"#),
+			["--profile", "Work Stuff", "a b", "cd ef"]
+		);
+		// 역슬래시는 그대로다.
+		assert_eq!(split_args(r"C:\Temp\a.txt"), [r"C:\Temp\a.txt"]);
+		assert_eq!(split_args(r#"--name """#), ["--name", ""]);
+		// 닫지 않은 따옴표는 끝까지다.
+		assert_eq!(split_args(r#"say "hello world"#), ["say", "hello world"]);
+	}
+
+	#[test]
 	fn every_kind_matches_its_serde_tag() {
 		let actions = [
 			RingAction::Open {
 				target: OpenTarget::File,
 				value: "/tmp/a".to_string(),
+				args: String::new(),
 			},
 			RingAction::Shell {
 				command: "true".to_string(),
@@ -540,6 +615,7 @@ mod tests {
 		let url = |value: &str| RingAction::Open {
 			target: OpenTarget::Url,
 			value: value.to_string(),
+			args: String::new(),
 		};
 		assert!(url("https://example.com").validate().is_ok());
 		assert!(url("HTTP://example.com").validate().is_ok());
@@ -554,6 +630,7 @@ mod tests {
 		let action = RingAction::Open {
 			target: OpenTarget::File,
 			value: "/Users/me/notes.txt".to_string(),
+			args: String::new(),
 		};
 		assert!(action.validate().is_ok());
 	}
@@ -631,6 +708,7 @@ mod tests {
 			RingAction::Open {
 				target: OpenTarget::App,
 				value: String::new(),
+				args: String::new(),
 			},
 			RingAction::Shell {
 				command: String::new(),
@@ -649,6 +727,7 @@ mod tests {
 		let wrong = RingAction::Open {
 			target: OpenTarget::Url,
 			value: "ftp://example.com".to_string(),
+			args: String::new(),
 		};
 		assert_eq!(wrong.validate(), Err(Refusal::UrlNotHttp));
 		assert!(!Refusal::UrlNotHttp.is_incomplete());

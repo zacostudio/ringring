@@ -95,6 +95,7 @@ pub fn slots(locale: Locale, exists: impl Fn(&Path) -> bool) -> Vec<Slot> {
 			action: RingAction::Open {
 				target: candidate.target,
 				value: candidate.path.to_string(),
+				args: String::new(),
 			},
 			confirm: false,
 		})

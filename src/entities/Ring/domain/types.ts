@@ -2,7 +2,8 @@
 
 /** 칸 하나가 하는 일. Rust 의 `RingAction` 과 같은 모양이다 (serde tag `kind`). */
 export type RingAction =
-	| { kind: "open"; target: "app" | "file" | "url"; value: string }
+	// `args` 는 앱에 넘기는 인자다. 앱일 때만 쓰고, 없으면 key 가 없다.
+	| { kind: "open"; target: "app" | "file" | "url"; value: string; args?: string }
 	| { kind: "shell"; command: string; working_dir: string; timeout_secs: number }
 	| { kind: "keystroke"; combos: string[] }
 	| { kind: "open_ring"; ring_id: string };

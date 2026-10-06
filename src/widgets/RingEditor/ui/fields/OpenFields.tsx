@@ -71,6 +71,21 @@ export function OpenFields({ action, onChange, onChooseTarget, onCommit }: OpenF
 					{action.target === "file" && <F.Hint>{t("open.fileHint")}</F.Hint>}
 				</F.Stack>
 			)}
+			{action.target === "app" && (
+				<F.Stack>
+					<F.Label>{t("open.args")}</F.Label>
+					<TextField
+						mono
+						data-field="open-args"
+						value={action.args ?? ""}
+						placeholder={t("open.argsPlaceholder")}
+						// 빈 인자는 key 째로 뺀다. 저장된 칸에도 그 key 가 없어 둘이 같은 글로 견줘진다.
+						onChange={(event) => onChange({ ...action, args: event.target.value || undefined }, false)}
+						onBlur={onCommit}
+					/>
+					<F.Hint>{t("open.argsHint")}</F.Hint>
+				</F.Stack>
+			)}
 		</>
 	);
 }

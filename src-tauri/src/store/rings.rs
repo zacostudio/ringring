@@ -475,6 +475,7 @@ mod tests {
 			action: RingAction::Open {
 				target: OpenTarget::Url,
 				value: "https://example.com".to_string(),
+				args: String::new(),
 			},
 			confirm: false,
 		}
@@ -547,6 +548,7 @@ mod tests {
 		bad.action = RingAction::Open {
 			target: OpenTarget::Url,
 			value: "file:///etc/passwd".to_string(),
+			args: String::new(),
 		};
 		assert!(save_slot(&c, "a", &bad).is_err());
 		assert!(get(&c, "a").unwrap().unwrap().slots.is_empty());

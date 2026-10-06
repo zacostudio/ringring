@@ -272,6 +272,7 @@ mod tests {
 				action: RingAction::Open {
 					target: OpenTarget::Url,
 					value: "https://example.com".to_string(),
+					args: String::new(),
 				},
 				confirm: false,
 			}],

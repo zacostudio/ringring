@@ -82,6 +82,10 @@ export const ja: Dictionary = {
 	"open.target.url": "Web アドレス",
 	"open.chooseApp": "アプリを選ぶ…",
 	"open.chooseFile": "ファイル・フォルダを選ぶ…",
+	"open.args": "引数",
+	"open.argsPlaceholder": "なし",
+	"open.argsHint":
+		"アプリを起動するときに渡す引数です。空白で区切り、空白を含む引数は引用符で囲みます。すでに起動しているアプリには渡されません。",
 	"open.fileHint": "ファイルはデフォルトのアプリで開きます。フォルダは Finder で開きます。",
 	"open.urlHint": "http:// か https:// で始まるアドレスだけを開きます。",
 
@@ -231,5 +235,7 @@ export const ja: Dictionary = {
 	"other:general.openLoginItems": "スタートアップ アプリを開く",
 	"other:backup.lead": "リングを 1 つのファイルで移します。ほかの PC に移すときや、控えを取るときに使います。",
 	"other:about.storage": "リングと設定はこの PC にだけ保存します。外部には何も送りません。",
-	"other:open.chooseFile": "ファイルを選ぶ…"
+	"other:open.chooseFile": "ファイルを選ぶ…",
+	"other:open.argsHint":
+		"プログラムを起動するときに渡す引数です。書いたとおりに渡されます。空白を含む引数は引用符で囲みます。"
 };

@@ -108,6 +108,9 @@ fn notify(app: &AppHandle, label: Option<&str>, failure: Failure) {
 /// 확인 물음에 보일 한 줄. 무엇을 실행하는지다.
 pub fn describe(action: &RingAction) -> String {
 	match action {
+		RingAction::Open { value, args, .. } if !args.trim().is_empty() => {
+			format!("{value} {}", args.trim())
+		}
 		RingAction::Open { value, .. } => value.clone(),
 		RingAction::Shell { command, .. } => command.clone(),
 		RingAction::Keystroke { combos } => combos.join(", "),
@@ -124,8 +127,12 @@ pub fn run(app: &AppHandle, slot: Slot) {
 	);
 	let label = slot.label;
 	match slot.action {
-		RingAction::Open { target, value } => {
-			spawn(app, label, move |app| open(app, target, value));
+		RingAction::Open {
+			target,
+			value,
+			args,
+		} => {
+			spawn(app, label, move |app| open(app, target, value, args));
 		}
 		RingAction::Shell {
 			command,
@@ -170,7 +177,12 @@ where
 	});
 }
 
-async fn open(app: AppHandle, target: OpenTarget, value: String) -> Result<(), Failure> {
+async fn open(
+	app: AppHandle,
+	target: OpenTarget,
+	value: String,
+	args: String,
+) -> Result<(), Failure> {
 	let value = value.trim().to_string();
 	match target {
 		OpenTarget::Url => {
@@ -192,6 +204,16 @@ async fn open(app: AppHandle, target: OpenTarget, value: String) -> Result<(), F
 				.map_err(|e| Failure::Other(e.to_string()))?;
 			if !exists {
 				return Err(Failure::TargetMissing);
+			}
+			// 인자는 앱에만 넘긴다. 인자가 없으면 전과 같은 길로 연다.
+			let args = args.trim().to_string();
+			if target == OpenTarget::App && !args.is_empty() {
+				return tauri::async_runtime::spawn_blocking(move || {
+					crate::exec::launch::app_with_args(&path, &args)
+				})
+				.await
+				.map_err(|e| Failure::Other(e.to_string()))?
+				.map_err(Failure::Other);
 			}
 			app.opener()
 				.open_path(path.to_string_lossy(), None::<&str>)

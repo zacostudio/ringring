@@ -80,6 +80,10 @@ export const en: Dictionary = {
 	"open.target.url": "Web address",
 	"open.chooseApp": "Choose an app…",
 	"open.chooseFile": "Choose a file or folder…",
+	"open.args": "Arguments",
+	"open.argsPlaceholder": "None",
+	"open.argsHint":
+		"Passed to the app when it starts. Separate them with spaces and put quotes around one that has a space. An app that is already running does not receive them.",
 	"open.fileHint": "A file opens in its default app. A folder opens in Finder.",
 	"open.urlHint": "Only addresses that start with http:// or https:// are opened.",
 
@@ -223,5 +227,7 @@ export const en: Dictionary = {
 	"other:general.openLoginItems": "Open Startup Apps",
 	"other:backup.lead": "Move rings as one file — to another PC, or to keep a copy.",
 	"other:about.storage": "Rings and settings are stored on this PC only. Nothing is sent anywhere.",
-	"other:open.chooseFile": "Choose a file…"
+	"other:open.chooseFile": "Choose a file…",
+	"other:open.argsHint":
+		"Passed to the program when it starts, exactly as written. Put quotes around an argument that has a space."
 };
