@@ -2,6 +2,7 @@
 import { appRepository, reloadAppState } from "@/entities/AppState";
 import type { AppState } from "@/entities/AppState";
 import { useT } from "@/shared/i18n";
+import { IS_MAC } from "@/shared/lib/shortcut";
 import { Button } from "@/shared/ui/Button";
 import { Icon } from "@/shared/ui/Icon";
 import * as F from "@/shared/ui/form.styles";
@@ -13,6 +14,18 @@ interface PermissionsPageProps {
 export function PermissionsPage({ appState }: PermissionsPageProps) {
 	const t = useT();
 	const trusted = appState.accessibilityTrusted;
+	// 손쉬운 사용은 macOS 의 권한이다. 다른 OS 에는 받을 권한이 없어, 알아 둘 것 한 줄만 보인다.
+	if (!IS_MAC) {
+		return (
+			<F.Page data-role="page-permissions">
+				<F.PageTitle>{t("nav.permissions")}</F.PageTitle>
+				<F.PageLead>{t("permissions.lead")}</F.PageLead>
+				<F.Group>
+					<p>{t("permissions.how")}</p>
+				</F.Group>
+			</F.Page>
+		);
+	}
 	return (
 		<F.Page data-role="page-permissions">
 			<F.PageTitle>{t("nav.permissions")}</F.PageTitle>

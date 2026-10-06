@@ -53,6 +53,22 @@ describe("dictionaries", () => {
 		}
 	});
 
+	test("a sentence that names a macOS thing has one for other systems", () => {
+		const macOnly =
+			/Mac|Finder|Safari|[⌘⌃⌥]|메뉴 막대|menu bar|メニューバー|시스템 설정|System Settings|システム設定|로그인 셸|login shell|ログインシェル/;
+		// macOS 에서만 보이는 글. 권한 페이지의 손쉬운 사용 줄과, 그 권한이 없을 때의 알림.
+		const shownOnMacOnly = new Set(["keystroke.accessMissing", "permissions.open"]);
+		for (const dictionary of [ko, en, ja]) {
+			for (const [key, sentence] of Object.entries(dictionary)) {
+				if (key.startsWith("other:") || shownOnMacOnly.has(key) || !macOnly.test(sentence)) continue;
+				expect(`other:${key}` in dictionary, key).toBe(true);
+			}
+			for (const [key, sentence] of Object.entries(dictionary)) {
+				if (key.startsWith("other:")) expect(macOnly.test(sentence), key).toBe(false);
+			}
+		}
+	});
+
 	test("every refusal code Rust can send has a sentence", () => {
 		for (const code of RING_REFUSAL_CODES) expect(ko[`refusal.${code}`], code).toBeDefined();
 	});

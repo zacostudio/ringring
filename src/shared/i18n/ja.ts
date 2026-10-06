@@ -216,5 +216,19 @@ export const ja: Dictionary = {
 	"other:refusal.shortcut_needs_modifier":
 		"Ctrl、Alt、Win のどれかを一緒に押してください。文字入力を奪わないためです。",
 	"other:refusal.shortcut_unavailable":
-		"Windows がこの組み合わせを受け付けませんでした。ほかのアプリが使っている可能性があります。"
+		"Windows がこの組み合わせを受け付けませんでした。ほかのアプリが使っている可能性があります。",
+	"other:ring.noShortcutNote":
+		"ショートカットのないリングです。ほかのリングのスロットかトレイアイコンのメニューから開きます。",
+	"other:ring.pausedNote": "ショートカットは一時停止中です。トレイアイコンのメニューか一般設定で再開します。",
+	"other:shell.commandPlaceholder": "例: start notepad",
+	"other:shell.commandHint":
+		"cmd で実行します。結果は実行履歴に残ります。制限時間を過ぎると、そのコマンドが起動したプロセスをすべて停止します。",
+	"other:general.pauseHint":
+		"オンにするとリングのショートカットがすべて止まります。トレイアイコンのメニューからは開けます。",
+	"other:general.launchHint": "Windows にサインインすると RingRing をトレイに表示します。",
+	"other:general.launchUnavailable": "開発ビルドはスタートアップ アプリに登録しません。",
+	"other:general.launchNeedsApproval": "Windows の設定のスタートアップ アプリで RingRing をオンにしてください。",
+	"other:general.openLoginItems": "スタートアップ アプリを開く",
+	"other:backup.lead": "リングを 1 つのファイルで移します。ほかの PC に移すときや、控えを取るときに使います。",
+	"other:about.storage": "リングと設定はこの PC にだけ保存します。外部には何も送りません。"
 };

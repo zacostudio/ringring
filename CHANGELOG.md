@@ -4,6 +4,12 @@ All notable changes to RingRing are recorded here. The format follows Keep a Cha
 
 ## [Unreleased]
 
+### Fixed
+
+- Windows: Settings no longer shows sentences written for macOS ("log in to your Mac", "menu bar", "login shell", "another Mac"). Eleven sentences have a Windows version, and the Permissions page shows only what applies on Windows.
+
+## [0.1.1] - 2026-10-06
+
 ## [0.1.0] - 2026-10-06
 
 ### Added

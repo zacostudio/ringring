@@ -210,5 +210,17 @@ export const ko: Dictionary = {
 	"other:permissions.how": "관리자 권한으로 실행 중인 앱은 링링이가 보내는 키 입력을 받지 않습니다.",
 	"other:refusal.shortcut_needs_modifier":
 		"Ctrl, Alt, Win 가운데 하나를 함께 눌러야 합니다. 글 입력을 가로채지 않게 하려는 것입니다.",
-	"other:refusal.shortcut_unavailable": "Windows 가 이 조합을 받지 않았습니다. 다른 앱이 쓰고 있을 수 있습니다."
+	"other:refusal.shortcut_unavailable": "Windows 가 이 조합을 받지 않았습니다. 다른 앱이 쓰고 있을 수 있습니다.",
+	"other:ring.noShortcutNote": "단축키가 없는 링입니다. 다른 링의 칸이나 트레이 아이콘의 메뉴로 엽니다.",
+	"other:ring.pausedNote": "단축키가 일시 정지돼 있습니다. 트레이 아이콘의 메뉴나 일반 설정에서 다시 켭니다.",
+	"other:shell.commandPlaceholder": "예: start notepad",
+	"other:shell.commandHint":
+		"cmd 로 실행합니다. 결과는 실행 기록에 남습니다. 제한 시간을 넘기면 그 명령이 띄운 프로세스를 모두 끝냅니다.",
+	"other:general.pauseHint": "켜 두면 링의 단축키가 모두 꺼집니다. 트레이 아이콘의 메뉴로는 계속 열 수 있습니다.",
+	"other:general.launchHint": "Windows 에 로그인하면 링링이를 트레이에 띄웁니다.",
+	"other:general.launchUnavailable": "개발 빌드는 시작 앱으로 등록하지 않습니다.",
+	"other:general.launchNeedsApproval": "Windows 설정의 시작 앱에서 링링이를 켜야 합니다.",
+	"other:general.openLoginItems": "시작 앱 설정 열기",
+	"other:backup.lead": "링을 파일 하나로 옮깁니다. 다른 PC 로 옮기거나 따로 보관할 때 씁니다.",
+	"other:about.storage": "링과 설정은 이 PC 에만 저장합니다. 밖으로 보내는 것은 없습니다."
 };

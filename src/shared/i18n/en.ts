@@ -210,5 +210,17 @@ export const en: Dictionary = {
 	"other:permissions.lead": "RingRing needs no extra permission on Windows.",
 	"other:permissions.how": "Apps running as administrator do not receive the keystrokes RingRing sends.",
 	"other:refusal.shortcut_needs_modifier": "Hold Ctrl, Alt or Win with it, so the shortcut does not swallow typing.",
-	"other:refusal.shortcut_unavailable": "Windows did not accept that combination. Another app may be using it."
+	"other:refusal.shortcut_unavailable": "Windows did not accept that combination. Another app may be using it.",
+	"other:ring.noShortcutNote": "This ring has no shortcut. A slot in another ring or the tray icon's menu opens it.",
+	"other:ring.pausedNote": "Shortcuts are paused. Turn them back on from the tray icon's menu or General.",
+	"other:shell.commandPlaceholder": "e.g. start notepad",
+	"other:shell.commandHint":
+		"Runs in cmd. The result goes to Recent runs. Past the time limit, every process the command started is stopped.",
+	"other:general.pauseHint": "Turns off every ring shortcut. Rings still open from the tray icon's menu.",
+	"other:general.launchHint": "Puts RingRing in the tray when you sign in to Windows.",
+	"other:general.launchUnavailable": "Development builds do not register a startup app.",
+	"other:general.launchNeedsApproval": "Turn RingRing on under Startup apps in Windows Settings.",
+	"other:general.openLoginItems": "Open Startup Apps",
+	"other:backup.lead": "Move rings as one file — to another PC, or to keep a copy.",
+	"other:about.storage": "Rings and settings are stored on this PC only. Nothing is sent anywhere."
 };
