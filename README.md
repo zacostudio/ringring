@@ -175,8 +175,10 @@ dev-agent 는 macOS 에서만 됩니다. `bun run lint` 는 줄 끝이 LF 일 �
 ### Windows
 
 ```
-bunx @tauri-apps/cli@2 build      # 릴리스 빌드와 NSIS 설치 파일
+.\scripts\build-windows.ps1       # 릴리스 빌드와 NSIS 설치 파일
 ```
+
+배포할 파일은 `tauri build` 를 바로 부르지 말고 이 스크립트로 만듭니다. Rust 는 소스 파일의 경로를 실행 파일에 넣는데, 그대로 두면 빌드한 사람의 홈 폴더(`C:\Users\<계정>`)가 남습니다. 스크립트는 그 경로를 `~` 로 바꿔 넣고, 빌드 뒤에 실행 파일을 훑어 남은 것이 있으면 실패로 끝냅니다.
 
 설치 파일은 `src-tauri/target/release/bundle/nsis/` 에 생깁니다. `scripts/build.sh` 는 macOS 에서만 됩니다.
 

@@ -1,6 +1,6 @@
 [package]
 name = "ringring"
-version = "0.1.0"
+version = "0.1.1"
 description = "RingRing — a ring menu around the cursor"
 authors = ["zacostudio"]
 license = "MIT"
@@ -52,6 +52,7 @@ windows-sys = { version = "0.60", features = [
 	"Win32_System_Threading",
 	"Win32_UI_HiDpi",
 	"Win32_UI_Input_KeyboardAndMouse",
+	"Win32_UI_Shell",
 	"Win32_UI_WindowsAndMessaging",
 ] }
 
