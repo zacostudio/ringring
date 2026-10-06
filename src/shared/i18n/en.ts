@@ -200,10 +200,12 @@ export const en: Dictionary = {
 	"refusal.import_empty": "The file holds no rings.",
 
 	// Sentences shown instead outside macOS (Windows). Each replaces the key without `other:` (`useT`).
-	"other:welcome.starterHint": "The starter ring holds File Explorer, Edge, Terminal, Notepad and the Downloads folder. You can change all of it later.",
+	"other:welcome.starterHint":
+		"The starter ring holds File Explorer, Edge, Terminal, Notepad and the Downloads folder. You can change all of it later.",
 	"other:welcome.sample.finder": "File Explorer",
 	"other:welcome.sample.browser": "Edge",
-	"other:ring.refusedNote": "Not registered: Windows refused this combination. Another app may hold it. Choose another one.",
+	"other:ring.refusedNote":
+		"Not registered: Windows refused this combination. Another app may hold it. Choose another one.",
 	"other:open.fileHint": "A file opens in its default app. A folder opens in File Explorer.",
 	"other:permissions.lead": "RingRing needs no extra permission on Windows.",
 	"other:permissions.how": "Apps running as administrator do not receive the keystrokes RingRing sends.",

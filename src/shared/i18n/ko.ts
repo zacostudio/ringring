@@ -199,13 +199,16 @@ export const ko: Dictionary = {
 	"refusal.import_empty": "파일에 링이 없습니다.",
 
 	// macOS 밖(Windows)에서 바꿔 보이는 글. `other:` 를 뗀 key 의 자리에 쓴다 (`useT`).
-	"other:welcome.starterHint": "기본 링에는 파일 탐색기, Edge, 터미널, 메모장, 다운로드 폴더가 들어갑니다. 나중에 모두 바꿀 수 있습니다.",
+	"other:welcome.starterHint":
+		"기본 링에는 파일 탐색기, Edge, 터미널, 메모장, 다운로드 폴더가 들어갑니다. 나중에 모두 바꿀 수 있습니다.",
 	"other:welcome.sample.finder": "파일 탐색기",
 	"other:welcome.sample.browser": "Edge",
-	"other:ring.refusedNote": "등록되지 않음: Windows 가 이 조합을 받지 않았습니다. 다른 앱이 쓰는 조합일 수 있습니다. 다른 조합을 고르세요.",
+	"other:ring.refusedNote":
+		"등록되지 않음: Windows 가 이 조합을 받지 않았습니다. 다른 앱이 쓰는 조합일 수 있습니다. 다른 조합을 고르세요.",
 	"other:open.fileHint": "파일은 기본 앱으로 열립니다. 폴더는 파일 탐색기에서 열립니다.",
 	"other:permissions.lead": "Windows 에서는 따로 받아야 하는 권한이 없습니다.",
 	"other:permissions.how": "관리자 권한으로 실행 중인 앱은 링링이가 보내는 키 입력을 받지 않습니다.",
-	"other:refusal.shortcut_needs_modifier": "Ctrl, Alt, Win 가운데 하나를 함께 눌러야 합니다. 글 입력을 가로채지 않게 하려는 것입니다.",
+	"other:refusal.shortcut_needs_modifier":
+		"Ctrl, Alt, Win 가운데 하나를 함께 눌러야 합니다. 글 입력을 가로채지 않게 하려는 것입니다.",
 	"other:refusal.shortcut_unavailable": "Windows 가 이 조합을 받지 않았습니다. 다른 앱이 쓰고 있을 수 있습니다."
 };

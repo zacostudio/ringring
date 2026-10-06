@@ -3,7 +3,9 @@
 :root {
 	color-scheme: light dark;
 
-	--font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Apple SD Gothic Neo", "Hiragino Sans", "Segoe UI", "Malgun Gothic", "Yu Gothic UI", sans-serif;
+	--font:
+		-apple-system, BlinkMacSystemFont, "SF Pro Text", "Apple SD Gothic Neo", "Hiragino Sans", "Segoe UI",
+		"Malgun Gothic", "Yu Gothic UI", sans-serif;
 	--font-mono: ui-monospace, "SF Mono", Menlo, "Cascadia Mono", Consolas, monospace;
 
 	/* 글자 크기는 셋뿐이다. 본문, 덧붙이는 글, 페이지 제목. */
