@@ -1,7 +1,7 @@
 {
   "name": "ringring",
   "version": "0.1.1",
-  "description": "RingRing — a ring menu around the cursor, for macOS",
+  "description": "RingRing — a ring menu around the cursor, for macOS and Windows",
   "license": "MIT",
   "private": true,
   "type": "module",
