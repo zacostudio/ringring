@@ -1,0 +1,3 @@
+/* 한국어에서 보이는 앱 이름 */
+CFBundleDisplayName = "링링이";
+CFBundleName = "링링이";

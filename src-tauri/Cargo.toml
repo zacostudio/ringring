@@ -1,0 +1,49 @@
+[package]
+name = "ringring"
+version = "0.1.0"
+description = "RingRing — a ring menu around the cursor"
+authors = ["zacostudio"]
+license = "MIT"
+edition = "2024"
+rust-version = "1.98.1"
+
+[lib]
+name = "ringring_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[features]
+default = []
+# 개발용 HTTP 제어 서버 (docs/dev-agent.md). 릴리스 빌드에는 넣지 않는다.
+dev-agent = ["dep:axum"]
+
+[build-dependencies]
+tauri-build = { version = "2.5", features = [] }
+
+[dependencies]
+tauri = { version = "2.12", features = ["macos-private-api", "tray-icon", "image-png"] }
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-single-instance = "2"
+tauri-plugin-log = "2"
+tauri-plugin-dialog = "2.8"
+tauri-plugin-opener = "2"
+tauri-plugin-notification = "2"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rusqlite = { version = "0.37", features = ["bundled"] }
+tokio = { version = "1", features = ["process", "io-util", "time", "rt", "macros", "fs", "sync", "net"] }
+libc = "0.2"
+log = "0.4"
+uuid = { version = "1", features = ["v4"] }
+chrono = "0.4"
+sys-locale = "0.3"
+axum = { version = "0.8", optional = true, default-features = false, features = ["json", "tokio", "http1"] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+block2 = "0.6"
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+strip = true

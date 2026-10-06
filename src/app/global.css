@@ -1,0 +1,167 @@
+/* 디자인 토큰과 바탕 규칙 — 색·글자 크기·간격은 여기에만 있다. 컴포넌트는 토큰만 쓴다 */
+
+:root {
+	color-scheme: light dark;
+
+	--font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Apple SD Gothic Neo", "Hiragino Sans", sans-serif;
+	--font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+
+	/* 글자 크기는 셋뿐이다. 본문, 덧붙이는 글, 페이지 제목. */
+	--text-body: 13px;
+	--text-meta: 12px;
+	--text-title: 18px;
+
+	--control-h: 28px;
+	--radius: 7px;
+
+	--bg: #fbfbfa;
+	--bg-side: #f0efec;
+	--bg-input: #ffffff;
+	/* 떠 있는 면 — toast, 고른 segment. 선 없이 바탕보다 밝은 면과 그림자로 뜬다. */
+	--bg-float: #ffffff;
+	--bg-hover: rgba(0, 0, 0, 0.045);
+	--bg-selected: rgba(0, 0, 0, 0.08);
+	--bg-field: rgba(0, 0, 0, 0.04);
+
+	--text: #1d1d1f;
+	--text-2: #65656b;
+	--text-3: #9d9da3;
+
+	--accent: #3157e8;
+	--accent-hover: #2749cf;
+	--on-accent: #ffffff;
+	--danger: #c0392b;
+	--ok: #2b8a3e;
+	--warn: #a86a12;
+
+	--ring-surface: rgba(251, 251, 250, 0.97);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root:not([data-theme="light"]) {
+		--bg: #1e1e20;
+		--bg-side: #27272a;
+		--bg-input: #161618;
+		--bg-float: #3a3a3f;
+		--bg-hover: rgba(255, 255, 255, 0.06);
+		--bg-selected: rgba(255, 255, 255, 0.11);
+		--bg-field: rgba(255, 255, 255, 0.06);
+
+		--text: #ececee;
+		--text-2: #a3a3aa;
+		--text-3: #6f6f77;
+
+		--accent: #7a96ff;
+		--accent-hover: #93aaff;
+		--on-accent: #0b1026;
+		--danger: #ff7b6b;
+		--ok: #5fcf7a;
+		--warn: #e0a84a;
+
+		--ring-surface: rgba(52, 52, 56, 0.97);
+	}
+}
+
+:root[data-theme="dark"] {
+	--bg: #1e1e20;
+	--bg-side: #27272a;
+	--bg-input: #161618;
+	--bg-float: #3a3a3f;
+	--bg-hover: rgba(255, 255, 255, 0.06);
+	--bg-selected: rgba(255, 255, 255, 0.11);
+	--bg-field: rgba(255, 255, 255, 0.06);
+
+	--text: #ececee;
+	--text-2: #a3a3aa;
+	--text-3: #6f6f77;
+
+	--accent: #7a96ff;
+	--accent-hover: #93aaff;
+	--on-accent: #0b1026;
+	--danger: #ff7b6b;
+	--ok: #5fcf7a;
+	--warn: #e0a84a;
+
+	--ring-surface: rgba(52, 52, 56, 0.97);
+}
+
+:root[data-theme="light"] {
+	color-scheme: light;
+}
+
+:root[data-theme="dark"] {
+	color-scheme: dark;
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+	height: 100%;
+	margin: 0;
+}
+
+body {
+	font-family: var(--font);
+	font-size: var(--text-body);
+	line-height: 1.45;
+	color: var(--text);
+	background: transparent;
+	-webkit-font-smoothing: antialiased;
+	/* 한국어와 일본어가 낱말 가운데서 끊기지 않게 한다. */
+	word-break: keep-all;
+	overflow-wrap: anywhere;
+	user-select: none;
+	-webkit-user-select: none;
+	cursor: default;
+	overflow: hidden;
+}
+
+/* 설정 창만 바탕이 있다. 링 창은 투명하다. */
+:root[data-window="settings"] body {
+	background: var(--bg);
+}
+
+/* 설정 창의 링 그림은 그림자가 없다. 가장자리 선 대신 입력 칸과 같은 면으로 바탕과 나뉜다. */
+:root[data-window="settings"] {
+	--ring-surface: var(--bg-field);
+}
+
+input,
+textarea,
+.selectable {
+	user-select: text;
+	-webkit-user-select: text;
+}
+
+button,
+input,
+textarea,
+select {
+	font: inherit;
+	color: inherit;
+}
+
+button {
+	cursor: pointer;
+}
+
+p {
+	margin: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		/* biome-ignore lint/complexity/noImportantStyles: 움직임 줄이기는 컴포넌트의 스타일을 이겨야 한다 */
+		animation-duration: 0.01ms !important;
+		/* biome-ignore lint/complexity/noImportantStyles: 위와 같다 */
+		transition-duration: 0.01ms !important;
+	}
+}

@@ -1,0 +1,19 @@
+# dependencies and build outputs
+node_modules/
+dist/
+release/
+target/
+src-tauri/target/
+src-tauri/gen/
+
+# local secrets — signing and notarization values never belong in the repository
+scripts/build.local.sh
+.env*
+*.p12
+*.pem
+*.cer
+*.mobileprovision
+*.keychain*
+
+.DS_Store
+*.log

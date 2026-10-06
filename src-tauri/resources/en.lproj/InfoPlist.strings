@@ -1,0 +1,3 @@
+/* App name shown in English */
+CFBundleDisplayName = "RingRing";
+CFBundleName = "RingRing";
