@@ -29,6 +29,8 @@ All notable changes to RingRing are recorded here. The format follows Keep a Cha
 
 ### Fixed
 
+- Windows: the ring no longer shows a title bar strip when a tap gives it the keyboard.
+- Windows: the buttons in the ring editor's header (Try it, the shortcut field, delete) are clickable; the window's drag strip covered them.
 - A failure notification no longer holds up other work. Posting one took about 2 s on an async worker, so a shell slot's 1 s time limit could end at 2.5 s when another slot failed at the same moment. The notification is now posted from its own thread; the failure is recorded first.
 - A stored shortcut that macOS refuses at launch is no longer only in the log. The failure is recorded in Recent runs under the ring's name (so the menu-bar icon and Settings point at it), and the ring's editor says the shortcut is not registered and why.
 - An empty sub-ring or a missing sub-ring is recorded in Recent runs under the slot's name, not under the error sentence.

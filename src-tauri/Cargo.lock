@@ -3113,7 +3113,7 @@ dependencies = [
 
 [[package]]
 name = "ringring"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "axum",
  "block2",
