@@ -222,5 +222,6 @@ export const ko: Dictionary = {
 	"other:general.launchNeedsApproval": "Windows 설정의 시작 앱에서 링링이를 켜야 합니다.",
 	"other:general.openLoginItems": "시작 앱 설정 열기",
 	"other:backup.lead": "링을 파일 하나로 옮깁니다. 다른 PC 로 옮기거나 따로 보관할 때 씁니다.",
-	"other:about.storage": "링과 설정은 이 PC 에만 저장합니다. 밖으로 보내는 것은 없습니다."
+	"other:about.storage": "링과 설정은 이 PC 에만 저장합니다. 밖으로 보내는 것은 없습니다.",
+	"other:open.chooseFile": "파일 고르기…"
 };

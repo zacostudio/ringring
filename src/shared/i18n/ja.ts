@@ -230,5 +230,6 @@ export const ja: Dictionary = {
 	"other:general.launchNeedsApproval": "Windows の設定のスタートアップ アプリで RingRing をオンにしてください。",
 	"other:general.openLoginItems": "スタートアップ アプリを開く",
 	"other:backup.lead": "リングを 1 つのファイルで移します。ほかの PC に移すときや、控えを取るときに使います。",
-	"other:about.storage": "リングと設定はこの PC にだけ保存します。外部には何も送りません。"
+	"other:about.storage": "リングと設定はこの PC にだけ保存します。外部には何も送りません。",
+	"other:open.chooseFile": "ファイルを選ぶ…"
 };

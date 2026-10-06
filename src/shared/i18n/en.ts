@@ -222,5 +222,6 @@ export const en: Dictionary = {
 	"other:general.launchNeedsApproval": "Turn RingRing on under Startup apps in Windows Settings.",
 	"other:general.openLoginItems": "Open Startup Apps",
 	"other:backup.lead": "Move rings as one file — to another PC, or to keep a copy.",
-	"other:about.storage": "Rings and settings are stored on this PC only. Nothing is sent anywhere."
+	"other:about.storage": "Rings and settings are stored on this PC only. Nothing is sent anywhere.",
+	"other:open.chooseFile": "Choose a file…"
 };
