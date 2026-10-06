@@ -24,8 +24,21 @@
 
 ## 설치
 
-- **macOS** (13 이상, Apple Silicon): 릴리스에 `.dmg` 가 있으면 그것을 엽니다. 없으면 아래대로 소스에서 빌드합니다.
-- **Windows** (10·11, x64): 릴리스의 `RingRing_<버전>_x64-setup.exe` 를 실행합니다. 서명하지 않은 설치 파일이라 SmartScreen 이 한 번 묻습니다 — "추가 정보" 를 누르고 "실행" 을 고릅니다.
+파일은 [릴리스](https://github.com/zacostudio/ringring/releases/latest) 에 있습니다.
+
+### macOS
+
+macOS 13 이상, Apple Silicon 에서 돕니다. `RingRing-<버전>-arm64.dmg` 를 열고 RingRing 을 응용 프로그램 폴더로 옮깁니다.
+
+Apple 서명과 notarization 이 없는 앱입니다. 그래서 내려받은 사본은 처음 열 때 Gatekeeper 가 막습니다. 터미널에서 한 번 풀어 줍니다.
+
+```
+xattr -dr com.apple.quarantine /Applications/RingRing.app
+```
+
+### Windows
+
+Windows 10·11 (x64) 에서 돕니다. `RingRing_<버전>_x64-setup.exe` 를 실행합니다. 서명하지 않은 설치 파일이라 SmartScreen 이 한 번 묻습니다 — "추가 정보" 를 누르고 "실행" 을 고릅니다.
 
 아래 글은 macOS 를 기준으로 적었습니다. Windows 에서 다른 점은 [Windows 에서](#windows-에서) 에 모았습니다.
 
@@ -72,49 +85,6 @@ Dock 아이콘은 없습니다. 설정 창을 닫아도 앱은 메뉴 막대에 
 
 셸 명령이 백그라운드 작업(`… &`)을 남기고 그 작업이 출력을 쥐고 있으면, 제한 시간까지 끝나지 않은 것으로 봅니다. 제한 시간이 되면 그 작업도 같이 끝납니다. 계속 돌게 하려면 출력을 돌려 두세요 (`> /dev/null 2>&1 &`).
 
-## 소스에서 빌드하고 실행하기
-
-macOS 13 이상, Apple Silicon 에서 돕니다. 필요한 것은 다음과 같습니다.
-
-- [Bun](https://bun.sh)
-- Rust 1.98.1 (`rust-toolchain.toml` 이 맞춰 줍니다)
-- Tauri CLI (`cargo install tauri-cli`)
-- Xcode Command Line Tools
-
-```
-bun install
-bun tauri:dev
-```
-
-메뉴 막대에 아이콘이 생깁니다. 처음 켜면 설정 창이 한 번 열립니다.
-
-개발 빌드는 identifier 가 `com.zacostudio.ringring.dev` 입니다. 설치된 앱과 데이터·로그가 섞이지 않습니다. 개발 빌드는 전역 단축키와 로그인 항목을 등록하지 않습니다. 다른 앱이 쓰는 조합을 가져가지 않게 하려는 것입니다. 단축키까지 걸어 보려면 `RINGRING_DEV_GLOBAL_SHORTCUTS=1` 을 주고 켭니다.
-
-```
-bun run typecheck      # TypeScript
-bun run lint           # Biome
-bun test src/          # 프런트 테스트
-cd src-tauri && cargo test --features dev-agent
-```
-
-OS 입력 없이 화면을 확인할 때는 개발용 HTTP 제어 서버(dev-agent)를 켭니다. `127.0.0.1:9797` 에서만 듣고, 릴리스 빌드에는 들어가지 않습니다.
-
-```
-RINGRING_DEV_AGENT=1 RINGRING_DEV_QUIET=1 bun run tauri:dev -- --features dev-agent
-```
-
-## 릴리스 빌드 (macOS)
-
-```
-./scripts/build.sh <버전>            # 검사, 버전 반영, .app 과 .dmg 만들기
-./scripts/build.sh <버전> --dry-run  # 검사와 릴리스 컴파일만. 번들과 버전 파일은 건드리지 않습니다
-./scripts/build.sh <버전> --smoke    # 개발 identifier 와 dev-agent 를 넣은 릴리스 컴파일. 릴리스 모드의 화면을 확인할 때 씁니다
-```
-
-Apple 계정이나 인증서는 필요 없습니다. 앱에 Developer ID 서명과 notarization 을 하지 않습니다. 그래서 내려받은 사본은 처음 열 때 Gatekeeper 가 막습니다.
-
-결과물은 `release/<버전>/` 에 생깁니다. 스크립트는 커밋·태그·업로드를 하지 않습니다.
-
 ## Windows 에서
 
 같은 코드가 Windows 10·11 (x64) 에서도 돕니다. macOS 와 다른 점은 다음과 같습니다.
@@ -130,22 +100,51 @@ Apple 계정이나 인증서는 필요 없습니다. 앱에 Developer ID 서명�
 - **기본 링.** 파일 탐색기, Edge, 터미널, 메모장, 다운로드 폴더가 들어갑니다.
 - **데이터와 로그.** 링은 `%APPDATA%\com.zacostudio.ringring\ringring.db` 에, 로그는 `%LOCALAPPDATA%\com.zacostudio.ringring\logs\RingRing.log` 에 있습니다.
 
-### Windows 에서 빌드하기
+## 소스에서 빌드하고 실행하기
 
-필요한 것은 다음과 같습니다.
+두 OS 모두 [Bun](https://bun.sh) 과 Rust 1.98.1 이 필요합니다. Rust 버전은 `rust-toolchain.toml` 이 맞춰 줍니다.
 
-- [Bun](https://bun.sh)
-- Rust 1.98.1 (`rust-toolchain.toml` 이 맞춰 줍니다) 과 Visual Studio 의 "C++ 를 사용한 데스크톱 개발" 빌드 도구
+### macOS
+
+macOS 13 이상, Apple Silicon 에서 돕니다. 더 필요한 것은 다음과 같습니다.
+
+- Tauri CLI (`cargo install tauri-cli`)
+- Xcode Command Line Tools
+
+```
+bun install
+bun tauri:dev
+```
+
+메뉴 막대에 아이콘이 생깁니다. 처음 켜면 설정 창이 한 번 열립니다.
+
+```
+bun run typecheck      # TypeScript
+bun run lint           # Biome
+bun test src/          # 프런트 테스트
+cd src-tauri && cargo test --features dev-agent
+```
+
+OS 입력 없이 화면을 확인할 때는 개발용 HTTP 제어 서버(dev-agent)를 켭니다. `127.0.0.1:9797` 에서만 듣고, 릴리스 빌드에는 들어가지 않습니다.
+
+```
+RINGRING_DEV_AGENT=1 RINGRING_DEV_QUIET=1 bun run tauri:dev -- --features dev-agent
+```
+
+### Windows
+
+더 필요한 것은 다음과 같습니다.
+
+- Visual Studio 의 "C++ 를 사용한 데스크톱 개발" 빌드 도구
 - Tauri CLI 2.12 이상 (`cargo install tauri-cli --locked`). 낡은 CLI 는 설정 파일을 읽지 못합니다. 깔지 않고 `bunx @tauri-apps/cli@2` 로 돌려도 됩니다
 - WebView2 런타임 (Windows 11 에는 들어 있습니다)
 
 ```
 bun install
-bun tauri:dev                     # 개발 빌드
-bunx @tauri-apps/cli@2 build      # 릴리스 빌드와 NSIS 설치 파일. 서명하지 않습니다
+bun tauri:dev
 ```
 
-`cargo tauri` 가 낡았으면 개발 빌드도 `bunx @tauri-apps/cli@2 dev --config src-tauri/tauri.dev.conf.json` 으로 돌립니다. 설치 파일은 `src-tauri/target/release/bundle/nsis/` 에 생깁니다.
+`cargo tauri` 가 낡았으면 `bunx @tauri-apps/cli@2 dev --config src-tauri/tauri.dev.conf.json` 으로 돌립니다.
 
 ```
 bun run typecheck
@@ -153,7 +152,33 @@ bun test src/
 cd src-tauri && cargo test
 ```
 
-dev-agent 와 `scripts/build.sh` 는 macOS 에서만 됩니다. `bun run lint` 는 줄 끝이 LF 일 때 통과합니다 — git 이 CRLF 로 꺼냈으면 `bunx biome lint src` 로 규칙만 봅니다.
+dev-agent 는 macOS 에서만 됩니다. `bun run lint` 는 줄 끝이 LF 일 때 통과합니다 — git 이 CRLF 로 꺼냈으면 `bunx biome lint src` 로 규칙만 봅니다.
+
+### 개발 빌드가 다른 점
+
+개발 빌드는 identifier 가 `com.zacostudio.ringring.dev` 입니다. 설치된 앱과 데이터·로그가 섞이지 않습니다. 개발 빌드는 전역 단축키와 로그인 항목을 등록하지 않습니다. 다른 앱이 쓰는 조합을 가져가지 않게 하려는 것입니다. 단축키까지 걸어 보려면 `RINGRING_DEV_GLOBAL_SHORTCUTS=1` 을 주고 켭니다.
+
+## 릴리스 빌드
+
+두 OS 모두 서명하지 않습니다. Apple 계정이나 인증서는 필요 없습니다.
+
+### macOS
+
+```
+./scripts/build.sh <버전>            # 검사, 버전 반영, .app 과 .dmg 만들기
+./scripts/build.sh <버전> --dry-run  # 검사와 릴리스 컴파일만. 번들과 버전 파일은 건드리지 않습니다
+./scripts/build.sh <버전> --smoke    # 개발 identifier 와 dev-agent 를 넣은 릴리스 컴파일. 릴리스 모드의 화면을 확인할 때 씁니다
+```
+
+결과물은 `release/<버전>/` 에 생깁니다. 스크립트는 커밋·태그·업로드를 하지 않습니다.
+
+### Windows
+
+```
+bunx @tauri-apps/cli@2 build      # 릴리스 빌드와 NSIS 설치 파일
+```
+
+설치 파일은 `src-tauri/target/release/bundle/nsis/` 에 생깁니다. `scripts/build.sh` 는 macOS 에서만 됩니다.
 
 ## 라이선스
 
