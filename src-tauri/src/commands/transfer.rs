@@ -5,7 +5,7 @@ use tauri::AppHandle;
 
 use super::{db, refresh_rings};
 use crate::error::CommandError;
-use crate::ring::model::{Refusal, RingError, ShortcutKind};
+use crate::ring::model::{Refusal, RingError};
 use crate::ring::transfer::{self, ImportPlan, ImportSummary, MAX_FILE_BYTES};
 use crate::store::rings as ring_store;
 
@@ -78,8 +78,8 @@ pub async fn rings_import(app: AppHandle, path: String) -> Result<ImportSummary,
 		summary.dropped_shortcuts += refused.len();
 		db(&app)
 			.with(move |conn| -> Result<(), RingError> {
-				for id in &refused {
-					ring_store::set_shortcut(conn, id, ShortcutKind::Normal, None)?;
+				for (id, kind) in &refused {
+					ring_store::set_shortcut(conn, id, *kind, None)?;
 				}
 				Ok(())
 			})

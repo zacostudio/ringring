@@ -8,7 +8,7 @@ use crate::error::CommandError;
 use crate::login_item::{self, LoginItemState};
 use crate::ring::controller;
 use crate::ring::keystroke;
-use crate::ring::model::RingAction;
+use crate::ring::model::{RingAction, ShortcutKind};
 use crate::settings::{self, Language, Locale, Theme};
 use crate::store::settings as settings_store;
 use crate::ui::{settings_window, tray};
@@ -36,8 +36,10 @@ pub struct AppStateView {
 	pub accessibility_trusted: bool,
 	/// 키 입력 칸이 하나라도 있는가. 있는데 권한이 없으면 화면이 권한 페이지를 가리킨다.
 	pub uses_keystrokes: bool,
-	/// 저장된 단축키를 OS 가 받지 않은 링의 id. 편집기가 그 링에 "등록되지 않음" 을 보인다.
+	/// 저장된 일반 단축키를 OS 가 받지 않은 링의 id. 편집기가 그 링에 "등록되지 않음" 을 보인다.
 	pub refused_shortcuts: Vec<String>,
+	/// 저장된 빠른 단축키를 OS 가 받지 않은 링의 id.
+	pub refused_quick_shortcuts: Vec<String>,
 	/// 아직 보지 않은 실패의 수. 왼쪽 줄의 "실행 기록" 이 점으로 알린다.
 	pub unseen_failures: usize,
 	/// 로그 파일의 경로. 정보 페이지가 보인다.
@@ -61,7 +63,8 @@ fn view(app: &AppHandle) -> AppStateView {
 				.iter()
 				.any(|slot| matches!(slot.action, RingAction::Keystroke { .. }))
 		}),
-		refused_shortcuts: crate::shortcuts::refused(),
+		refused_shortcuts: crate::shortcuts::refused(ShortcutKind::Normal),
+		refused_quick_shortcuts: crate::shortcuts::refused(ShortcutKind::Quick),
 		unseen_failures: crate::runs::unseen_failures(),
 		log_path: app
 			.path()

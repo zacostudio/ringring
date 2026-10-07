@@ -5,7 +5,7 @@ use tauri::AppHandle;
 use super::{announce_rings, db, refresh_rings};
 use crate::error::CommandError;
 use crate::ring::controller;
-use crate::ring::model::{LIMITS, Limits, OpenTarget, Ring, Slot};
+use crate::ring::model::{LIMITS, Limits, OpenTarget, Ring, ShortcutKind, Slot};
 use crate::ring::starter;
 use crate::store::rings::{self as ring_store, LinkChoices, SlotRef};
 use crate::ui::path_panel::{self, PanelOptions};
@@ -58,7 +58,7 @@ pub async fn ring_save(
 	Ok(ring)
 }
 
-/// 링의 전역 단축키를 바꾼다. 빈 값이면 뗀다. OS 에 등록된 뒤에만 저장한다.
+/// 링의 `kind` 전역 단축키(일반·빠른)를 바꾼다. 빈 값이면 뗀다. OS 에 등록된 뒤에만 저장한다.
 ///
 /// 조합을 입력받던 중이면 여기서 끝낸다. 끝내고, 걸어 보고, 저장하고, 답하는 순서는 Rust 가 지킨다
 /// (`shortcuts::change_shortcut`).
@@ -66,9 +66,10 @@ pub async fn ring_save(
 pub async fn ring_set_shortcut(
 	app: AppHandle,
 	ring_id: String,
+	kind: ShortcutKind,
 	shortcut: Option<String>,
 ) -> Result<(), CommandError> {
-	crate::shortcuts::set_ring_shortcut(&app, &db(&app), &ring_id, shortcut).await?;
+	crate::shortcuts::set_ring_shortcut(&app, &db(&app), &ring_id, kind, shortcut).await?;
 	announce_rings(&app)
 }
 

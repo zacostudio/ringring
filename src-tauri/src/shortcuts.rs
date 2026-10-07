@@ -151,25 +151,42 @@ fn gate() -> Gate {
 	}
 }
 
+/// 걸 조합 하나 — `(링 id, 종류, 조합)`.
+type Binding = (String, ShortcutKind, String);
+
+/// 지금 바꾸는 조합 — `(링 id, 종류, 새 조합)`. 새 조합이 `None` 이면 뗀다.
+type Change<'a> = (&'a str, ShortcutKind, Option<&'a str>);
+
+/// OS 가 받지 않은 조합들 — `(링 id, 종류)`.
+type Failed = Vec<(String, ShortcutKind)>;
+
+const KINDS: [ShortcutKind; 2] = [ShortcutKind::Normal, ShortcutKind::Quick];
+
 /// 등록 한 번이 할 일.
 #[derive(Debug, Default, PartialEq, Eq)]
 struct Plan {
-	/// `(링 id, 조합)`. 이 순서로 건다.
-	register: Vec<(String, String)>,
+	/// 이 순서로 건다.
+	register: Vec<Binding>,
 	/// 걸어 두지는 않지만 OS 가 받는지만 본다 — 걸었다가 곧바로 뗀다. 일시 정지 중에 조합을 바꿀 때다.
-	probe: Option<(String, String)>,
+	probe: Option<Binding>,
 }
 
-/// 지금 무엇을 걸어야 하는지 정한다.
+/// 지금 무엇을 걸어야 하는지 정한다. 링마다 일반·빠른 단축키를 둘 다 본다.
 ///
-/// `changed` 는 `(링 id, 새 조합)` 이다 — 그 링만 저장값 대신 이 조합으로 본다 (`None` 이면 걸지 않는다).
-fn plan(rings: &[Ring], gate: Gate, changed: Option<(&str, Option<&str>)>) -> Plan {
-	let wanted = rings.iter().filter_map(|ring| {
-		let combo = match changed {
-			Some((id, combo)) if id == ring.id => combo.map(str::to_string),
-			_ => ring.shortcut.clone(),
-		}?;
-		gate.build.allows(&combo).then(|| (ring.id.clone(), combo))
+/// `changed` 의 링과 종류만 저장값 대신 그 새 조합으로 본다 (`None` 이면 걸지 않는다).
+fn plan(rings: &[Ring], gate: Gate, changed: Option<Change>) -> Plan {
+	let wanted = rings.iter().flat_map(|ring| {
+		KINDS.into_iter().filter_map(move |kind| {
+			let combo = match changed {
+				Some((id, changed_kind, combo)) if id == ring.id && changed_kind == kind => {
+					combo.map(str::to_string)
+				}
+				_ => ring.shortcut_of(kind).map(str::to_string),
+			}?;
+			gate.build
+				.allows(&combo)
+				.then(|| (ring.id.clone(), kind, combo))
+		})
 	});
 	if !gate.paused && !gate.capturing {
 		return Plan {
@@ -179,35 +196,39 @@ fn plan(rings: &[Ring], gate: Gate, changed: Option<(&str, Option<&str>)>) -> Pl
 	}
 	Plan {
 		register: Vec::new(),
-		probe: changed.and_then(|(id, _)| wanted.into_iter().find(|(ring_id, _)| ring_id == id)),
+		probe: changed.and_then(|(id, kind, _)| {
+			wanted
+				.into_iter()
+				.find(|(ring_id, k, _)| ring_id == id && *k == kind)
+		}),
 	}
 }
 
 /// OS 에 걸고 떼는 일. 테스트는 순서를 적는 가짜를 쓴다.
 trait Registrar {
 	fn unregister_all(&mut self);
-	fn register(&mut self, ring_id: &str, combo: &str) -> Result<(), String>;
+	fn register(&mut self, ring_id: &str, kind: ShortcutKind, combo: &str) -> Result<(), String>;
 }
 
-/// 전부 뗀 뒤 `plan` 대로 건다. 돌려주는 것은 등록에 실패한 링의 id 다.
-fn run_pass(registrar: &mut impl Registrar, plan: Plan) -> Vec<String> {
+/// 전부 뗀 뒤 `plan` 대로 건다. 돌려주는 것은 등록에 실패한 조합의 `(링 id, 종류)` 다.
+fn run_pass(registrar: &mut impl Registrar, plan: Plan) -> Failed {
 	registrar.unregister_all();
 	let mut failed = Vec::new();
-	for (ring_id, combo) in plan.register {
-		match registrar.register(&ring_id, &combo) {
+	for (ring_id, kind, combo) in plan.register {
+		match registrar.register(&ring_id, kind, &combo) {
 			Ok(()) => log::info!("[shortcut] registered '{combo}'"),
 			Err(e) => {
 				log::warn!("[shortcut] failed to register '{combo}': {e}");
-				failed.push(ring_id);
+				failed.push((ring_id, kind));
 			}
 		}
 	}
-	if let Some((ring_id, combo)) = plan.probe {
-		let accepted = registrar.register(&ring_id, &combo);
+	if let Some((ring_id, kind, combo)) = plan.probe {
+		let accepted = registrar.register(&ring_id, kind, &combo);
 		registrar.unregister_all();
 		if let Err(e) = accepted {
 			log::warn!("[shortcut] the OS refused '{combo}': {e}");
-			failed.push(ring_id);
+			failed.push((ring_id, kind));
 		}
 	}
 	failed
@@ -247,17 +268,64 @@ pub fn parse_for_registration(combo: &str) -> Result<Shortcut, Refusal> {
 	Ok(shortcut)
 }
 
-/// `wanted` 를 이미 쓰는 다른 링의 이름.
+/// 빠른 단축키로 쓸 수 있는 조합인지 읽는다. 키는 F1~F24 여야 한다. 수식키는 무엇이든, 없어도 된다.
+///
+/// 수식키 없는 F1~F12 는 다른 앱의 그 키를 가져간다. 막지 않는다 — 고른 사람의 몫이다. 화면이 알린다.
+pub fn parse_for_quick(combo: &str) -> Result<Shortcut, Refusal> {
+	let shortcut = combo
+		.parse::<Shortcut>()
+		.map_err(|_| Refusal::ShortcutInvalid)?;
+	if !is_function_key(shortcut.key) {
+		return Err(Refusal::ShortcutNeedsFunctionKey);
+	}
+	Ok(shortcut)
+}
+
+/// 종류에 맞는 규칙으로 읽는다.
+pub fn parse_for(kind: ShortcutKind, combo: &str) -> Result<Shortcut, Refusal> {
+	match kind {
+		ShortcutKind::Normal => parse_for_registration(combo),
+		ShortcutKind::Quick => parse_for_quick(combo),
+	}
+}
+
+fn is_function_key(code: Code) -> bool {
+	matches!(
+		code,
+		Code::F1
+			| Code::F2
+			| Code::F3
+			| Code::F4
+			| Code::F5
+			| Code::F6
+			| Code::F7
+			| Code::F8
+			| Code::F9
+			| Code::F10
+			| Code::F11
+			| Code::F12
+	) || is_spare_function_key(code)
+}
+
+/// `wanted` 를 이미 쓰는 링의 이름. 모든 링의 일반·빠른 단축키를 함께 본다.
+/// 바꾸려는 자리(`ring_id` 의 `kind`)만 뺀다 — 같은 링의 다른 종류와 겹쳐도 충돌이다.
 ///
 /// 글자가 아니라 읽은 조합으로 견준다 — 같은 키를 여러 글자로 쓸 수 있다 (`Ctrl` 과 `Control`).
 /// 읽지 못하는 저장값은 건너뛴다. 그런 값은 등록되지 않으므로 조합을 차지하지 않는다.
-pub fn conflict(ring_id: &str, wanted: &Shortcut, rings: &[Ring]) -> Option<String> {
+pub fn conflict(
+	ring_id: &str,
+	kind: ShortcutKind,
+	wanted: &Shortcut,
+	rings: &[Ring],
+) -> Option<String> {
 	rings.iter().find_map(|ring| {
-		if ring.id == ring_id {
-			return None;
-		}
-		let parsed = ring.shortcut.as_deref()?.parse::<Shortcut>().ok()?;
-		(parsed.mods == wanted.mods && parsed.key == wanted.key).then(|| ring.name.clone())
+		KINDS.into_iter().find_map(|k| {
+			if ring.id == ring_id && k == kind {
+				return None;
+			}
+			let parsed = ring.shortcut_of(k)?.parse::<Shortcut>().ok()?;
+			(parsed.mods == wanted.mods && parsed.key == wanted.key).then(|| ring.name.clone())
+		})
 	})
 }
 
@@ -272,7 +340,7 @@ impl Registrar for Os<'_> {
 	}
 
 	/// 링 하나의 조합을 건다. 누름과 놓음을 둘 다 controller 로 넘긴다.
-	fn register(&mut self, ring_id: &str, combo: &str) -> Result<(), String> {
+	fn register(&mut self, ring_id: &str, _kind: ShortcutKind, combo: &str) -> Result<(), String> {
 		let shortcut = combo
 			.parse::<Shortcut>()
 			.map_err(|e| format!("Invalid shortcut '{combo}': {e}"))?;
@@ -301,7 +369,7 @@ fn on_main_thread() -> bool {
 
 /// 등록을 지금 상태에 맞춘다. **main thread 에서만 부른다** — 파일 머리의 설명을 본다.
 /// 링 창이 있어야 하는지도 같이 맞춘다.
-fn pass_now(app: &AppHandle, changed: Option<(&str, Option<&str>)>) -> Vec<String> {
+fn pass_now(app: &AppHandle, changed: Option<Change>) -> Failed {
 	debug_assert!(
 		on_main_thread(),
 		"shortcut registration must run on the main thread"
@@ -324,26 +392,36 @@ fn pass_now(app: &AppHandle, changed: Option<(&str, Option<&str>)>) -> Vec<Strin
 
 // ── OS 가 거절한 저장된 조합 ───────────────────────────────────────────
 
-/// 저장된 조합을 OS 가 받지 않은 링의 id. 편집기가 그 링의 단축키를 "등록되지 않음" 으로 보인다.
-static REFUSED: Mutex<Vec<String>> = Mutex::new(Vec::new());
+/// 저장된 조합을 OS 가 받지 않은 `(링 id, 종류)`. 편집기가 그 단축키를 "등록되지 않음" 으로 보인다.
+static REFUSED: Mutex<Failed> = Mutex::new(Vec::new());
 
-/// 저장된 조합이 지금 OS 에 걸려 있지 않은 링들.
-pub fn refused() -> Vec<String> {
-	REFUSED.lock().unwrap_or_else(|e| e.into_inner()).clone()
+/// 저장된 `kind` 조합이 지금 OS 에 걸려 있지 않은 링들의 id.
+pub fn refused(kind: ShortcutKind) -> Vec<String> {
+	REFUSED
+		.lock()
+		.unwrap_or_else(|e| e.into_inner())
+		.iter()
+		.filter(|(_, k)| *k == kind)
+		.map(|(id, _)| id.clone())
+		.collect()
 }
 
-/// 실패한 링 가운데 **저장된** 조합이 거절된 것만 남긴다. `changed` 의 링은 아직 저장하지 않은 조합을
+/// 실패한 것 가운데 **저장된** 조합이 거절된 것만 남긴다. `changed` 의 자리는 아직 저장하지 않은 조합을
 /// 시험한 것이다 — 그 거절은 조합을 바꾼 쪽이 바로 알린다.
-fn stored_refusals(failed: &[String], changed: Option<(&str, Option<&str>)>) -> Vec<String> {
+fn stored_refusals(failed: &[(String, ShortcutKind)], changed: Option<Change>) -> Failed {
 	failed
 		.iter()
-		.filter(|id| changed.is_none_or(|(changed_id, _)| changed_id != id.as_str()))
+		.filter(|(id, kind)| {
+			changed.is_none_or(|(changed_id, changed_kind, _)| {
+				changed_id != id.as_str() || changed_kind != *kind
+			})
+		})
 		.cloned()
 		.collect()
 }
 
-/// 거절된 링의 목록을 바꾼다. 바뀌었으면 설정 창에 알린다.
-fn note_refused(app: &AppHandle, now: Vec<String>) {
+/// 거절된 조합의 목록을 바꾼다. 바뀌었으면 설정 창에 알린다.
+fn note_refused(app: &AppHandle, now: Failed) {
 	let changed = {
 		let mut guard = REFUSED.lock().unwrap_or_else(|e| e.into_inner());
 		let changed = *guard != now;
@@ -361,16 +439,19 @@ fn note_refused(app: &AppHandle, now: Vec<String>) {
 }
 
 /// main thread 로 건너가 [`pass_now`] 를 돌리고 답을 기다린다. 기다리는 동안 thread 를 붙잡지 않는다.
-/// main thread 에 닿지 못하면 `changed` 의 링을 실패로 돌려준다 — 걸리지 않은 조합을 저장하지 않게 한다.
-async fn pass(app: &AppHandle, changed: Option<(&str, Option<&str>)>) -> Vec<String> {
-	let owned = changed.map(|(id, combo)| (id.to_string(), combo.map(str::to_string)));
-	let unreachable: Vec<String> = owned.iter().map(|(id, _)| id.clone()).collect();
+/// main thread 에 닿지 못하면 `changed` 의 자리를 실패로 돌려준다 — 걸리지 않은 조합을 저장하지 않게 한다.
+async fn pass(app: &AppHandle, changed: Option<Change<'_>>) -> Failed {
+	let owned = changed.map(|(id, kind, combo)| (id.to_string(), kind, combo.map(str::to_string)));
+	let unreachable: Failed = owned
+		.iter()
+		.map(|(id, kind, _)| (id.clone(), *kind))
+		.collect();
 	let (tx, rx) = tokio::sync::oneshot::channel();
 	let handle = app.clone();
 	let sent = app.run_on_main_thread(move || {
 		let changed = owned
 			.as_ref()
-			.map(|(id, combo)| (id.as_str(), combo.as_deref()));
+			.map(|(id, kind, combo)| (id.as_str(), *kind, combo.as_deref()));
 		let _ = tx.send(pass_now(&handle, changed));
 	});
 	if let Err(e) = sent {
@@ -393,14 +474,14 @@ pub async fn begin() -> Op {
 }
 
 impl Op {
-	/// 등록을 지금 상태(메모리의 링 목록, 일시 정지, 입력받는 중)에 맞춘다. 실패한 링의 id 를 돌려준다.
-	pub async fn resync(&self, app: &AppHandle) -> Vec<String> {
+	/// 등록을 지금 상태(메모리의 링 목록, 일시 정지, 입력받는 중)에 맞춘다. 실패한 `(링 id, 종류)` 를 돌려준다.
+	pub async fn resync(&self, app: &AppHandle) -> Vec<(String, ShortcutKind)> {
 		pass(app, None).await
 	}
 }
 
 /// 등록을 지금 상태에 맞춘다. 링 목록이나 일시 정지가 바뀐 뒤에 부른다.
-pub async fn resync(app: &AppHandle) -> Vec<String> {
+pub async fn resync(app: &AppHandle) -> Vec<(String, ShortcutKind)> {
 	begin().await.resync(app).await
 }
 
@@ -412,7 +493,7 @@ pub fn start(app: &AppHandle) {
 	let locale = crate::settings::locale();
 	for ring in controller::rings()
 		.iter()
-		.filter(|ring| failed.contains(&ring.id))
+		.filter(|ring| failed.iter().any(|(id, _)| *id == ring.id))
 	{
 		crate::runs::record_failure(
 			app,
@@ -428,10 +509,15 @@ pub fn start(app: &AppHandle) {
 trait ShortcutSteps {
 	/// 받던 입력을 끝낸다. 돌려주는 것은 "받는 중이었는가" 다.
 	fn end_capture(&mut self) -> bool;
-	/// 쓸 수 있는 조합이고 다른 링이 쓰지 않는가.
-	fn check(&self, ring_id: &str, combo: &str) -> Result<(), RingError>;
-	async fn pass(&mut self, changed: Option<(&str, Option<&str>)>) -> Vec<String>;
-	async fn save(&mut self, ring_id: &str, combo: Option<&str>) -> Result<(), RingError>;
+	/// 그 종류로 쓸 수 있는 조합이고 다른 자리가 쓰지 않는가.
+	fn check(&self, ring_id: &str, kind: ShortcutKind, combo: &str) -> Result<(), RingError>;
+	async fn pass(&mut self, changed: Option<Change<'_>>) -> Failed;
+	async fn save(
+		&mut self,
+		ring_id: &str,
+		kind: ShortcutKind,
+		combo: Option<&str>,
+	) -> Result<(), RingError>;
 	/// 메모리의 링 목록을 저장된 값으로 다시 읽는다.
 	async fn reload(&mut self) -> Result<(), RingError>;
 }
@@ -448,11 +534,12 @@ trait ShortcutSteps {
 async fn change_shortcut(
 	steps: &mut impl ShortcutSteps,
 	ring_id: &str,
+	kind: ShortcutKind,
 	combo: Option<&str>,
 ) -> Result<(), RingError> {
 	let was_capturing = steps.end_capture();
 	if let Some(combo) = combo {
-		if let Err(refused) = steps.check(ring_id, combo) {
+		if let Err(refused) = steps.check(ring_id, kind, combo) {
 			if was_capturing {
 				steps.pass(None).await;
 			}
@@ -460,15 +547,15 @@ async fn change_shortcut(
 		}
 	}
 	if steps
-		.pass(Some((ring_id, combo)))
+		.pass(Some((ring_id, kind, combo)))
 		.await
 		.iter()
-		.any(|id| id == ring_id)
+		.any(|(id, k)| id == ring_id && *k == kind)
 	{
 		steps.pass(None).await;
 		return Err(Refusal::ShortcutUnavailable.into());
 	}
-	if let Err(e) = steps.save(ring_id, combo).await {
+	if let Err(e) = steps.save(ring_id, kind, combo).await {
 		steps.pass(None).await;
 		return Err(e);
 	}
@@ -485,24 +572,27 @@ impl ShortcutSteps for LiveSteps<'_> {
 		capture().end_all()
 	}
 
-	fn check(&self, ring_id: &str, combo: &str) -> Result<(), RingError> {
-		let parsed = parse_for_registration(combo)?;
-		match conflict(ring_id, &parsed, &controller::rings()) {
+	fn check(&self, ring_id: &str, kind: ShortcutKind, combo: &str) -> Result<(), RingError> {
+		let parsed = parse_for(kind, combo)?;
+		match conflict(ring_id, kind, &parsed, &controller::rings()) {
 			Some(owner) => Err(RingError::RefusedWith(Refusal::ShortcutTaken, owner)),
 			None => Ok(()),
 		}
 	}
 
-	async fn pass(&mut self, changed: Option<(&str, Option<&str>)>) -> Vec<String> {
+	async fn pass(&mut self, changed: Option<Change<'_>>) -> Failed {
 		pass(self.app, changed).await
 	}
 
-	async fn save(&mut self, ring_id: &str, combo: Option<&str>) -> Result<(), RingError> {
+	async fn save(
+		&mut self,
+		ring_id: &str,
+		kind: ShortcutKind,
+		combo: Option<&str>,
+	) -> Result<(), RingError> {
 		let (id, combo) = (ring_id.to_string(), combo.map(str::to_string));
 		self.db
-			.with(move |conn| {
-				ring_store::set_shortcut(conn, &id, ShortcutKind::Normal, combo.as_deref())
-			})
+			.with(move |conn| ring_store::set_shortcut(conn, &id, kind, combo.as_deref()))
 			.await
 			.map_err(RingError::Other)
 			.and_then(|result| result)
@@ -520,17 +610,24 @@ impl ShortcutSteps for LiveSteps<'_> {
 	}
 }
 
-/// 링의 전역 단축키를 바꾼다. `shortcut` 이 `None` 이거나 비어 있으면 뗀다. 순서는 [`change_shortcut`] 에 있다.
+/// 링의 `kind` 단축키를 바꾼다. `shortcut` 이 `None` 이거나 비어 있으면 뗀다. 순서는 [`change_shortcut`] 에 있다.
 /// 돌아왔을 때 메모리의 링 목록은 저장된 값이다. 창과 트레이에 알리는 일은 호출자가 한다.
 pub async fn set_ring_shortcut(
 	app: &AppHandle,
 	db: &Db,
 	ring_id: &str,
+	kind: ShortcutKind,
 	shortcut: Option<String>,
 ) -> Result<(), RingError> {
 	let shortcut = shortcut.filter(|combo| !combo.trim().is_empty());
 	let _op = begin().await;
-	change_shortcut(&mut LiveSteps { app, db }, ring_id, shortcut.as_deref()).await
+	change_shortcut(
+		&mut LiveSteps { app, db },
+		ring_id,
+		kind,
+		shortcut.as_deref(),
+	)
+	.await
 }
 
 /// 설정 창이 `id` 번 입력을 받기 시작했다.
@@ -581,7 +678,8 @@ pub async fn dev_registered(app: &AppHandle) -> Vec<String> {
 	let sent = app.run_on_main_thread(move || {
 		let held = controller::rings()
 			.into_iter()
-			.filter_map(|ring| ring.shortcut)
+			.flat_map(|ring| [ring.shortcut, ring.quick_shortcut])
+			.flatten()
 			.filter(|combo| {
 				combo
 					.parse::<Shortcut>()
@@ -605,11 +703,15 @@ mod tests {
 	}
 
 	fn ring(id: &str, name: &str, combo: Option<&str>) -> Ring {
+		ring_with_quick(id, name, combo, None)
+	}
+
+	fn ring_with_quick(id: &str, name: &str, combo: Option<&str>, quick: Option<&str>) -> Ring {
 		Ring {
 			id: id.to_string(),
 			name: name.to_string(),
 			shortcut: combo.map(str::to_string),
-			quick_shortcut: None,
+			quick_shortcut: quick.map(str::to_string),
 			slot_count: 6,
 			slots: Vec::new(),
 		}
@@ -650,6 +752,46 @@ mod tests {
 	}
 
 	#[test]
+	fn a_quick_shortcut_is_any_function_key_with_or_without_modifiers() {
+		for combo in [
+			"F1",
+			"F12",
+			"Ctrl+F5",
+			"Alt+Shift+F9",
+			"Cmd+F2",
+			"Shift+F13",
+			"F24",
+		] {
+			assert!(parse_for_quick(combo).is_ok(), "{combo}");
+		}
+	}
+
+	#[test]
+	fn a_quick_shortcut_without_a_function_key_is_refused() {
+		for combo in ["Ctrl+KeyA", "Space", "Alt+Space", "Cmd+Digit1"] {
+			assert_eq!(
+				parse_for_quick(combo),
+				Err(Refusal::ShortcutNeedsFunctionKey),
+				"{combo}"
+			);
+		}
+		assert_eq!(parse_for_quick("F99"), Err(Refusal::ShortcutInvalid));
+	}
+
+	#[test]
+	fn each_kind_uses_its_own_rules() {
+		assert!(parse_for(ShortcutKind::Quick, "F5").is_ok());
+		assert_eq!(
+			parse_for(ShortcutKind::Normal, "F5"),
+			Err(Refusal::ShortcutNeedsModifier)
+		);
+		assert_eq!(
+			parse_for(ShortcutKind::Quick, "Alt+Space"),
+			Err(Refusal::ShortcutNeedsFunctionKey)
+		);
+	}
+
+	#[test]
 	fn an_unreadable_combo_is_invalid() {
 		assert_eq!(
 			parse_for_registration("Cmd+NotAKey"),
@@ -662,11 +804,21 @@ mod tests {
 	fn the_same_keys_spelled_differently_still_conflict() {
 		let rings = [ring("a", "작업", Some("Ctrl+Shift+KeyT"))];
 		assert_eq!(
-			conflict("b", &shortcut("Control+Shift+KeyT"), &rings),
+			conflict(
+				"b",
+				ShortcutKind::Normal,
+				&shortcut("Control+Shift+KeyT"),
+				&rings
+			),
 			Some("작업".to_string())
 		);
 		assert_eq!(
-			conflict("b", &shortcut("Shift+Ctrl+KeyT"), &rings),
+			conflict(
+				"b",
+				ShortcutKind::Normal,
+				&shortcut("Shift+Ctrl+KeyT"),
+				&rings
+			),
 			Some("작업".to_string())
 		);
 	}
@@ -674,7 +826,10 @@ mod tests {
 	#[test]
 	fn a_ring_does_not_conflict_with_itself() {
 		let rings = [ring("a", "작업", Some("Alt+Space"))];
-		assert_eq!(conflict("a", &shortcut("Alt+Space"), &rings), None);
+		assert_eq!(
+			conflict("a", ShortcutKind::Normal, &shortcut("Alt+Space"), &rings),
+			None
+		);
 	}
 
 	#[test]
@@ -684,7 +839,40 @@ mod tests {
 			ring("b", "깨진 값", Some("Alt+Shift+˝")),
 			ring("c", "단축키 없음", None),
 		];
-		assert_eq!(conflict("z", &shortcut("Alt+KeyR"), &rings), None);
+		assert_eq!(
+			conflict("z", ShortcutKind::Normal, &shortcut("Alt+KeyR"), &rings),
+			None
+		);
+	}
+
+	#[test]
+	fn a_normal_and_a_quick_shortcut_of_different_rings_conflict() {
+		let rings = [
+			ring_with_quick("a", "작업", Some("Ctrl+F5"), None),
+			ring_with_quick("b", "도구", None, Some("Alt+F6")),
+		];
+		assert_eq!(
+			conflict("c", ShortcutKind::Quick, &shortcut("Ctrl+F5"), &rings),
+			Some("작업".to_string())
+		);
+		assert_eq!(
+			conflict("c", ShortcutKind::Normal, &shortcut("Alt+F6"), &rings),
+			Some("도구".to_string())
+		);
+	}
+
+	#[test]
+	fn the_two_shortcuts_of_one_ring_cannot_be_the_same() {
+		let rings = [ring_with_quick("a", "작업", Some("Ctrl+F5"), Some("F6"))];
+		assert_eq!(
+			conflict("a", ShortcutKind::Quick, &shortcut("Ctrl+F5"), &rings),
+			Some("작업".to_string())
+		);
+		// 같은 자리에 같은 조합을 다시 저장하는 것은 충돌이 아니다.
+		assert_eq!(
+			conflict("a", ShortcutKind::Quick, &shortcut("F6"), &rings),
+			None
+		);
 	}
 
 	// ── 입력받는 중 ──
@@ -734,10 +922,11 @@ mod tests {
 		capturing: false,
 	};
 
-	fn pairs(items: &[(&str, &str)]) -> Vec<(String, String)> {
+	/// 일반 단축키만의 등록 목록.
+	fn pairs(items: &[(&str, &str)]) -> Vec<Binding> {
 		items
 			.iter()
-			.map(|(id, combo)| (id.to_string(), combo.to_string()))
+			.map(|(id, combo)| (id.to_string(), ShortcutKind::Normal, combo.to_string()))
 			.collect()
 	}
 
@@ -753,12 +942,41 @@ mod tests {
 			pairs(&[("a", "Alt+Space"), ("c", "Alt+KeyC")])
 		);
 		assert_eq!(
-			plan(&rings, OPEN, Some(("b", Some("Alt+KeyB")))).register,
+			plan(
+				&rings,
+				OPEN,
+				Some(("b", ShortcutKind::Normal, Some("Alt+KeyB")))
+			)
+			.register,
 			pairs(&[("a", "Alt+Space"), ("b", "Alt+KeyB"), ("c", "Alt+KeyC")])
 		);
 		assert_eq!(
-			plan(&rings, OPEN, Some(("a", None))).register,
+			plan(&rings, OPEN, Some(("a", ShortcutKind::Normal, None))).register,
 			pairs(&[("c", "Alt+KeyC")])
+		);
+	}
+
+	#[test]
+	fn a_ring_registers_both_of_its_shortcuts_and_the_change_hits_only_its_kind() {
+		let rings = [ring_with_quick("a", "A", Some("Alt+Space"), Some("F5"))];
+		assert_eq!(
+			plan(&rings, OPEN, None).register,
+			[
+				(
+					"a".to_string(),
+					ShortcutKind::Normal,
+					"Alt+Space".to_string()
+				),
+				("a".to_string(), ShortcutKind::Quick, "F5".to_string()),
+			]
+		);
+		assert_eq!(
+			plan(&rings, OPEN, Some(("a", ShortcutKind::Quick, None))).register,
+			[(
+				"a".to_string(),
+				ShortcutKind::Normal,
+				"Alt+Space".to_string()
+			)]
 		);
 	}
 
@@ -790,14 +1008,25 @@ mod tests {
 			paused: true,
 			..OPEN
 		};
-		let planned = plan(&rings, paused, Some(("b", Some("Alt+KeyB"))));
+		let planned = plan(
+			&rings,
+			paused,
+			Some(("b", ShortcutKind::Normal, Some("Alt+KeyB"))),
+		);
 		assert!(planned.register.is_empty());
 		assert_eq!(
 			planned.probe,
-			Some(("b".to_string(), "Alt+KeyB".to_string()))
+			Some((
+				"b".to_string(),
+				ShortcutKind::Normal,
+				"Alt+KeyB".to_string()
+			))
 		);
 		// 떼는 것은 물어볼 것이 없다.
-		assert_eq!(plan(&rings, paused, Some(("a", None))).probe, None);
+		assert_eq!(
+			plan(&rings, paused, Some(("a", ShortcutKind::Normal, None))).probe,
+			None
+		);
 		// 등록하지 않는 빌드는 잠깐도 걸지 않는다.
 		let silent = Gate {
 			build: BuildGate::Nothing,
@@ -805,7 +1034,12 @@ mod tests {
 			capturing: false,
 		};
 		assert_eq!(
-			plan(&rings, silent, Some(("b", Some("Alt+KeyB")))).probe,
+			plan(
+				&rings,
+				silent,
+				Some(("b", ShortcutKind::Normal, Some("Alt+KeyB")))
+			)
+			.probe,
 			None
 		);
 	}
@@ -842,7 +1076,12 @@ mod tests {
 			self.held.clear();
 		}
 
-		fn register(&mut self, _ring_id: &str, combo: &str) -> Result<(), String> {
+		fn register(
+			&mut self,
+			_ring_id: &str,
+			_kind: ShortcutKind,
+			combo: &str,
+		) -> Result<(), String> {
 			self.calls.push(format!("register {combo}"));
 			if self.refuse.contains(&combo) {
 				return Err("refused".to_string());
@@ -869,7 +1108,7 @@ mod tests {
 			os.calls,
 			["unregister_all", "register Alt+Space", "register Alt+KeyC"]
 		);
-		assert_eq!(failed, ["c"]);
+		assert_eq!(failed, [("c".to_string(), ShortcutKind::Normal)]);
 		assert_eq!(os.held, ["Alt+Space"]);
 	}
 
@@ -880,7 +1119,11 @@ mod tests {
 			&mut os,
 			Plan {
 				register: Vec::new(),
-				probe: Some(("b".to_string(), "Alt+KeyB".to_string())),
+				probe: Some((
+					"b".to_string(),
+					ShortcutKind::Normal,
+					"Alt+KeyB".to_string(),
+				)),
 			},
 		);
 		assert!(failed.is_empty());
@@ -909,20 +1152,25 @@ mod tests {
 			std::mem::take(&mut self.capturing)
 		}
 
-		fn check(&self, _ring_id: &str, _combo: &str) -> Result<(), RingError> {
+		fn check(
+			&self,
+			_ring_id: &str,
+			_kind: ShortcutKind,
+			_combo: &str,
+		) -> Result<(), RingError> {
 			if self.check_refuses {
 				return Err(Refusal::ShortcutNeedsModifier.into());
 			}
 			Ok(())
 		}
 
-		async fn pass(&mut self, changed: Option<(&str, Option<&str>)>) -> Vec<String> {
+		async fn pass(&mut self, changed: Option<Change<'_>>) -> Failed {
 			assert!(!self.capturing, "a pass must not run while capturing");
 			match changed {
-				Some((id, combo)) => {
+				Some((id, kind, combo)) => {
 					self.log.push(format!("register with {combo:?}"));
 					if self.os_refuses {
-						return vec![id.to_string()];
+						return vec![(id.to_string(), kind)];
 					}
 				}
 				None => self.log.push("register stored".to_string()),
@@ -930,7 +1178,12 @@ mod tests {
 			Vec::new()
 		}
 
-		async fn save(&mut self, _ring_id: &str, combo: Option<&str>) -> Result<(), RingError> {
+		async fn save(
+			&mut self,
+			_ring_id: &str,
+			_kind: ShortcutKind,
+			combo: Option<&str>,
+		) -> Result<(), RingError> {
 			self.log.push(format!("save {combo:?}"));
 			if self.save_fails {
 				return Err(RingError::Other("disk".to_string()));
@@ -951,7 +1204,7 @@ mod tests {
 			..FakeSteps::default()
 		};
 		assert_eq!(
-			change_shortcut(&mut steps, "a", Some("Alt+Space")).await,
+			change_shortcut(&mut steps, "a", ShortcutKind::Normal, Some("Alt+Space")).await,
 			Ok(())
 		);
 		assert_eq!(
@@ -973,7 +1226,7 @@ mod tests {
 			..FakeSteps::default()
 		};
 		assert_eq!(
-			change_shortcut(&mut steps, "a", Some("Alt+Space")).await,
+			change_shortcut(&mut steps, "a", ShortcutKind::Normal, Some("Alt+Space")).await,
 			Err(Refusal::ShortcutUnavailable.into())
 		);
 		assert_eq!(
@@ -994,7 +1247,7 @@ mod tests {
 			..FakeSteps::default()
 		};
 		assert_eq!(
-			change_shortcut(&mut steps, "a", Some("KeyA")).await,
+			change_shortcut(&mut steps, "a", ShortcutKind::Normal, Some("KeyA")).await,
 			Err(Refusal::ShortcutNeedsModifier.into())
 		);
 		assert_eq!(steps.log, ["end capture", "register stored"]);
@@ -1004,19 +1257,26 @@ mod tests {
 			check_refuses: true,
 			..FakeSteps::default()
 		};
-		let _ = change_shortcut(&mut steps, "a", Some("KeyA")).await;
+		let _ = change_shortcut(&mut steps, "a", ShortcutKind::Normal, Some("KeyA")).await;
 		assert_eq!(steps.log, ["end capture"]);
 	}
 
 	#[test]
 	fn only_a_refused_stored_combo_is_kept_as_refused() {
-		let failed = vec!["a".to_string(), "b".to_string()];
-		// 켤 때: 둘 다 저장된 조합이다.
+		let failed = vec![
+			("a".to_string(), ShortcutKind::Normal),
+			("b".to_string(), ShortcutKind::Normal),
+			("b".to_string(), ShortcutKind::Quick),
+		];
+		// 켤 때: 모두 저장된 조합이다.
 		assert_eq!(stored_refusals(&failed, None), failed);
-		// "b" 의 조합을 바꾸는 중이다. "b" 의 거절은 저장된 조합의 거절이 아니다.
+		// "b" 의 일반 단축키를 바꾸는 중이다. 그 거절은 저장된 조합의 거절이 아니다. 빠른 단축키의 거절은 남는다.
 		assert_eq!(
-			stored_refusals(&failed, Some(("b", Some("Cmd+KeyK")))),
-			vec!["a".to_string()]
+			stored_refusals(&failed, Some(("b", ShortcutKind::Normal, Some("Cmd+KeyK")))),
+			vec![
+				("a".to_string(), ShortcutKind::Normal),
+				("b".to_string(), ShortcutKind::Quick)
+			]
 		);
 		assert!(stored_refusals(&[], None).is_empty());
 	}
@@ -1027,7 +1287,11 @@ mod tests {
 			save_fails: true,
 			..FakeSteps::default()
 		};
-		assert!(change_shortcut(&mut steps, "a", None).await.is_err());
+		assert!(
+			change_shortcut(&mut steps, "a", ShortcutKind::Normal, None)
+				.await
+				.is_err()
+		);
 		assert_eq!(
 			steps.log,
 			[

@@ -8,7 +8,8 @@ use serde::{Deserialize, Serialize};
 use tauri_plugin_global_shortcut::Shortcut;
 
 use super::model::{
-	Named, OpenTarget, Refusal, Ring, RingAction, Slot, check_link, check_name, check_slot_count,
+	Named, OpenTarget, Refusal, Ring, RingAction, ShortcutKind, Slot, check_link, check_name,
+	check_slot_count,
 };
 use crate::shortcuts::parse_for_registration;
 
@@ -190,11 +191,14 @@ pub fn plan(
 	Ok(ImportPlan { rings, summary })
 }
 
-/// 등록에 실패한 링 가운데 이번에 가져온 것만 고른다. 원래 있던 링은 가져오기가 건드리지 않는다.
-pub fn imported_among(failed: &[String], imported: &[String]) -> Vec<String> {
+/// 등록에 실패한 조합 가운데 이번에 가져온 링의 것만 고른다. 원래 있던 링은 가져오기가 건드리지 않는다.
+pub fn imported_among(
+	failed: &[(String, ShortcutKind)],
+	imported: &[String],
+) -> Vec<(String, ShortcutKind)> {
 	failed
 		.iter()
-		.filter(|id| imported.contains(id))
+		.filter(|(id, _)| imported.contains(id))
 		.cloned()
 		.collect()
 }
@@ -380,9 +384,15 @@ mod tests {
 
 	#[test]
 	fn only_imported_rings_lose_a_refused_shortcut() {
-		let failed = ["old".to_string(), "new-2".to_string()];
+		let failed = [
+			("old".to_string(), ShortcutKind::Normal),
+			("new-2".to_string(), ShortcutKind::Quick),
+		];
 		let imported = ["new-1".to_string(), "new-2".to_string()];
-		assert_eq!(imported_among(&failed, &imported), ["new-2".to_string()]);
+		assert_eq!(
+			imported_among(&failed, &imported),
+			[("new-2".to_string(), ShortcutKind::Quick)]
+		);
 		assert!(imported_among(&failed[..1], &imported).is_empty());
 	}
 
