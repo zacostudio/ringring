@@ -11,6 +11,7 @@ All notable changes to RingRing are recorded here. The format follows Keep a Cha
 
 ### Changed
 
+- A sub-ring slot is named after the ring it opens. Renaming the slot renames the ring (and every slot that opens it), and renaming the ring renames those slots. Before, the two names drifted apart: the slot showed the new name while the chooser and the sidebar kept the old one. Existing sub-ring slots take their ring's name on upgrade.
 - The ring's shortcut now only shows the ring. Releasing the key runs nothing, wherever the cursor is; pick with a click, a number key, or arrows and Enter. Before, a quick press while the mouse drifted could run a slot before the ring was even visible. **Existing shortcuts lose hold-to-run** — set a quick shortcut to get it back.
 
 ## [0.1.3] - 2026-10-06
