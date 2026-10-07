@@ -4,6 +4,15 @@ All notable changes to RingRing are recorded here. The format follows Keep a Cha
 
 ## [Unreleased]
 
+### Added
+
+- Quick shortcut: each ring can have a second shortcut, F1–F24 with or without ⌃ ⌥ ⌘ ⇧. Hold it, move toward a slot and release to run that slot — the hold behavior the single shortcut had before. A bare F1–F12 takes that key from every other app; Settings warns about it. Normal and quick shortcuts share one conflict check across all rings.
+- Export files carry the quick shortcut (`quickShortcut`). Older files import without one.
+
+### Changed
+
+- The ring's shortcut now only shows the ring. Releasing the key runs nothing, wherever the cursor is; pick with a click, a number key, or arrows and Enter. Before, a quick press while the mouse drifted could run a slot before the ring was even visible. **Existing shortcuts lose hold-to-run** — set a quick shortcut to get it back.
+
 ## [0.1.3] - 2026-10-06
 
 ### Added
