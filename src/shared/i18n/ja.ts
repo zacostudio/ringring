@@ -72,6 +72,8 @@ export const ja: Dictionary = {
 	"slot.chooseAction": "このスロットがすることを選んでください。",
 	"slot.name": "名前",
 	"slot.namePlaceholder": "リングに表示する名前",
+	"slot.subRingNameHint":
+		"サブリングのスロット名はそのサブリングの名前です。ここで変えるとリング名と左の一覧も変わります。",
 	"slot.icon": "アイコン",
 	"slot.iconSearch": "アイコン名で検索 (英語)",
 	"slot.confirm": "実行前に確認",

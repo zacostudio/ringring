@@ -192,12 +192,19 @@ export function SlotEditor({
 		setDraft(latest.current);
 	};
 
-	/** 동작이 바뀌었다. 이름과 아이콘은 사용자가 아직 정하지 않았을 때만 그 동작의 것으로 채운다. */
+	/**
+	 * 동작이 바뀌었다. 이름과 아이콘은 사용자가 아직 정하지 않았을 때만 그 동작의 것으로 채운다.
+	 * 하위 링은 다르다 — 칸의 이름이 곧 그 링의 이름이므로 고른 링의 이름을 그대로 쓴다.
+	 */
 	const changeAction = (action: RingAction, save: boolean, defaults?: SlotDefaults) => {
+		const label =
+			action.kind === "open_ring" && defaults?.label
+				? defaults.label
+				: latest.current.label || defaults?.label || "";
 		update(
 			{
 				action,
-				label: latest.current.label || defaults?.label || "",
+				label,
 				icon: defaults?.icon && isAutoIcon(latest.current.icon) ? defaults.icon : latest.current.icon
 			},
 			save
@@ -300,6 +307,7 @@ export function SlotEditor({
 							action={action}
 							limits={limits}
 							onChange={changeAction}
+							savedLabel={saved?.label ?? ""}
 							onCreate={() => void createSubRing()}
 							onEditRing={onEditRing}
 						/>
@@ -330,6 +338,7 @@ export function SlotEditor({
 							onBlur={() => void flush()}
 						/>
 					</S.NameRow>
+					{action.kind === "open_ring" && <F.Hint>{t("slot.subRingNameHint")}</F.Hint>}
 					{pickingIcon && (
 						<IconPicker
 							value={draft.icon}

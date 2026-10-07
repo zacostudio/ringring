@@ -70,6 +70,8 @@ export const en: Dictionary = {
 	"slot.chooseAction": "Choose what this slot does.",
 	"slot.name": "Name",
 	"slot.namePlaceholder": "Shown in the ring",
+	"slot.subRingNameHint":
+		"A sub-ring slot is named after its ring. Renaming it here renames the ring and its entry in the list.",
 	"slot.icon": "Icon",
 	"slot.iconSearch": "Search icons by name",
 	"slot.confirm": "Ask before running",

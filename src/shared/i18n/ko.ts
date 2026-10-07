@@ -70,6 +70,8 @@ export const ko: Dictionary = {
 	"slot.chooseAction": "이 칸이 할 일을 고르세요.",
 	"slot.name": "이름",
 	"slot.namePlaceholder": "링에 보일 이름",
+	"slot.subRingNameHint":
+		"하위 링 칸의 이름은 그 하위 링의 이름입니다. 여기서 바꾸면 링 이름과 왼쪽 목록도 같이 바뀝니다.",
 	"slot.icon": "아이콘",
 	"slot.iconSearch": "아이콘 이름으로 찾기 (영어)",
 	"slot.confirm": "실행 전에 확인",

@@ -13,6 +13,8 @@ interface SubRingFieldsProps {
 	ringId: string;
 	position: number;
 	action: Extract<RingAction, { kind: "open_ring" }>;
+	/** 저장된 칸의 이름. 이름을 고치면 링의 이름도 바뀌므로 목록을 다시 읽는다. */
+	savedLabel: string;
 	limits: RingLimits;
 	onChange: ActionChange;
 	/** 빈 하위 링을 만들어 이 칸에 잇는다. */
@@ -25,6 +27,7 @@ export function SubRingFields({
 	ringId,
 	position,
 	action,
+	savedLabel,
 	limits,
 	onChange,
 	onCreate,
@@ -46,7 +49,7 @@ export function SubRingFields({
 		return () => {
 			alive = false;
 		};
-	}, [ringId, position]);
+	}, [ringId, position, savedLabel]);
 
 	if (choices === null) return null;
 
