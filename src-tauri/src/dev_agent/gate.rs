@@ -49,17 +49,18 @@ fn post(key: u16, down: bool, flags: u64) {
 	}
 }
 
-/// 그 조합이 지금 이 앱의 전역 단축키로 걸려 있는가.
+/// 그 조합이 지금 이 앱의 전역 단축키(일반·빠른)로 걸려 있는가.
 fn combo_registered() -> bool {
 	let Ok(wanted) = GATE_COMBO.parse::<Shortcut>() else {
 		return false;
 	};
 	crate::shortcuts::active()
 		&& controller::rings().iter().any(|ring| {
-			ring.shortcut
-				.as_deref()
-				.and_then(|combo| combo.parse::<Shortcut>().ok())
-				.is_some_and(|have| have.mods == wanted.mods && have.key == wanted.key)
+			[ring.shortcut.as_deref(), ring.quick_shortcut.as_deref()]
+				.into_iter()
+				.flatten()
+				.filter_map(|combo| combo.parse::<Shortcut>().ok())
+				.any(|have| have.mods == wanted.mods && have.key == wanted.key)
 		})
 }
 
