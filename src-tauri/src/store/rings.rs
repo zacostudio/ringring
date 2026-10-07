@@ -226,6 +226,7 @@ pub fn update(conn: &Connection, id: &str, name: &str, slot_count: usize) -> Out
 		"DELETE FROM ring_slots WHERE ring_id = ?1 AND position >= ?2",
 		params![id, slot_count as i64],
 	))?;
+	sync_sub_ring_labels(&tx)?;
 	sql(tx.commit())?;
 	require(conn, id)
 }
@@ -277,6 +278,18 @@ fn links(conn: &Connection, skip: Option<(&str, usize)>) -> Outcome<Vec<(String,
 }
 
 /// 칸 하나를 넣는다. "실행 전에 확인" 이 뜻이 없는 동작이면 그 값을 끈 채로 넣는다.
+/// 하위 링을 여는 칸의 이름을 그 링의 이름으로 맞춘다. 하위 링 칸은 이름을 따로 갖지 않는다 —
+/// 칸의 이름과 링의 이름이 달라 무엇을 고쳤는지 알 수 없던 것을 없앤다. migration v2 도 이 문장을 쓴다.
+pub(super) const SYNC_SUB_RING_LABELS: &str = "UPDATE ring_slots
+	SET label = (SELECT name FROM rings WHERE rings.id = json_extract(ring_slots.action_json, '$.ring_id'))
+	WHERE action_kind = 'open_ring'
+		AND EXISTS (SELECT 1 FROM rings WHERE rings.id = json_extract(ring_slots.action_json, '$.ring_id'))";
+
+fn sync_sub_ring_labels(conn: &Connection) -> Outcome<()> {
+	sql(conn.execute(SYNC_SUB_RING_LABELS, []))?;
+	Ok(())
+}
+
 fn insert_slot(conn: &Connection, ring_id: &str, slot: &Slot) -> Outcome<()> {
 	let action_json =
 		serde_json::to_string(&slot.action).map_err(|e| RingError::Other(e.to_string()))?;
@@ -310,8 +323,18 @@ pub fn save_slot(conn: &Connection, ring_id: &str, slot: &Slot) -> Outcome<Ring>
 		let edges = links(conn, Some((ring_id, slot.position)))?;
 		model::check_link(&edges, ring_id, target)?;
 	}
-	insert_slot(conn, ring_id, slot)?;
-	touch(conn, ring_id)?;
+	let tx = sql(conn.unchecked_transaction())?;
+	insert_slot(&tx, ring_id, slot)?;
+	// 하위 링 칸의 이름은 그 링의 이름이다. 칸에서 이름을 고치면 링의 이름이 바뀌고, 그 링을 여는 다른 칸도 따라간다.
+	if let RingAction::OpenRing { ring_id: target } = &slot.action {
+		sql(tx.execute(
+			"UPDATE rings SET name = ?2, updated_at = ?3 WHERE id = ?1",
+			params![target, slot.label.trim(), now()],
+		))?;
+		sync_sub_ring_labels(&tx)?;
+	}
+	touch(&tx, ring_id)?;
+	sql(tx.commit())?;
 	require(conn, ring_id)
 }
 
@@ -466,6 +489,7 @@ pub fn import(conn: &Connection, rings: &[Ring]) -> Outcome<()> {
 			insert_slot(&tx, &ring.id, slot)?;
 		}
 	}
+	sync_sub_ring_labels(&tx)?;
 	sql(tx.commit())?;
 	Ok(())
 }
@@ -510,6 +534,73 @@ mod tests {
 
 	fn ring(c: &Connection, id: &str) -> Ring {
 		create(c, id, id, &[]).expect("create")
+	}
+
+	fn sub_slot(position: usize, label: &str, target: &str) -> Slot {
+		Slot {
+			label: label.to_string(),
+			..link_slot(position, target)
+		}
+	}
+
+	fn label_at(c: &Connection, ring_id: &str, position: usize) -> String {
+		get(c, ring_id)
+			.unwrap()
+			.unwrap()
+			.slot(position)
+			.unwrap()
+			.label
+			.clone()
+	}
+
+	#[test]
+	fn naming_a_sub_ring_slot_renames_the_ring_and_every_slot_that_opens_it() {
+		let c = conn();
+		ring(&c, "a");
+		ring(&c, "b");
+		ring(&c, "sub");
+		save_slot(&c, "a", &sub_slot(0, "sub", "sub")).unwrap();
+		save_slot(&c, "b", &sub_slot(3, "sub", "sub")).unwrap();
+		save_slot(&c, "a", &sub_slot(0, "  개발 도구 ", "sub")).unwrap();
+		assert_eq!(get(&c, "sub").unwrap().unwrap().name, "개발 도구");
+		assert_eq!(label_at(&c, "a", 0), "개발 도구");
+		assert_eq!(label_at(&c, "b", 3), "개발 도구");
+	}
+
+	#[test]
+	fn renaming_a_ring_renames_the_slots_that_open_it() {
+		let c = conn();
+		ring(&c, "a");
+		ring(&c, "sub");
+		save_slot(&c, "a", &url_slot(1, "sub")).unwrap();
+		save_slot(&c, "a", &sub_slot(0, "sub", "sub")).unwrap();
+		update(&c, "sub", "도구", 6).unwrap();
+		assert_eq!(label_at(&c, "a", 0), "도구");
+		// 다른 동작의 칸은 이름이 같아도 그대로다.
+		assert_eq!(label_at(&c, "a", 1), "sub");
+	}
+
+	#[test]
+	fn imported_sub_ring_slots_take_the_name_of_the_ring_they_open() {
+		let c = conn();
+		let sub = Ring {
+			id: "sub".to_string(),
+			name: "도구".to_string(),
+			shortcut: None,
+			quick_shortcut: None,
+			slot_count: 6,
+			slots: Vec::new(),
+		};
+		let top = Ring {
+			id: "top".to_string(),
+			name: "작업".to_string(),
+			shortcut: None,
+			quick_shortcut: None,
+			slot_count: 6,
+			slots: vec![sub_slot(0, "옛 이름", "sub")],
+		};
+		import(&c, &[sub, top]).unwrap();
+		assert_eq!(label_at(&c, "top", 0), "도구");
 	}
 
 	#[test]

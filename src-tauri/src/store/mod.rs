@@ -108,15 +108,19 @@ pub fn ensure_schema(conn: &Connection) -> Result<(), String> {
 	// v2 — 빠른 단축키. NULL 이면 없다. 일반 단축키(`shortcut`)와 따로 정한다.
 	//
 	// SQLite 는 `ADD COLUMN` 에 UNIQUE 를 받지 않는다. 그래서 unique index 를 따로 만든다. NULL 은 여럿이어도 된다.
+	//
+	// 하위 링 칸의 이름도 여기서 그 링의 이름으로 맞춘다 (`rings::SYNC_SUB_RING_LABELS`). v1 에서는 둘이 따로 갔다.
 	if version < 2 {
-		conn.execute_batch(
+		conn.execute_batch(&format!(
 			"BEGIN;
 			ALTER TABLE rings ADD COLUMN quick_shortcut TEXT;
 			CREATE UNIQUE INDEX rings_quick_shortcut ON rings(quick_shortcut);
+			{};
 			DELETE FROM schema_version;
 			INSERT INTO schema_version (version) VALUES (2);
 			COMMIT;",
-		)
+			rings::SYNC_SUB_RING_LABELS
+		))
 		.map_err(|e| format!("DB migration v2 failed: {e}"))?;
 		log::info!("[store] schema v2 — quick_shortcut added");
 	}
@@ -185,10 +189,21 @@ mod tests {
 			ALTER TABLE rings DROP COLUMN quick_shortcut;
 			UPDATE schema_version SET version = 1;
 			INSERT INTO rings (id, name, shortcut, slot_count, sort_order, updated_at)
-			VALUES ('a', 'a', 'Alt+Space', 6, 0, '');",
+			VALUES ('a', 'a', 'Alt+Space', 6, 0, '');
+			INSERT INTO rings (id, name, slot_count, sort_order, updated_at) VALUES ('sub', '도구', 6, 1, '');
+			INSERT INTO ring_slots (ring_id, position, label, icon, action_kind, action_json)
+			VALUES ('a', 0, '하위', 'circle-dot', 'open_ring', '{\"kind\":\"open_ring\",\"ring_id\":\"sub\"}');",
 		)
 		.unwrap();
 		ensure_schema(&conn).unwrap();
+		let label: String = conn
+			.query_row(
+				"SELECT label FROM ring_slots WHERE ring_id = 'a'",
+				[],
+				|row| row.get(0),
+			)
+			.unwrap();
+		assert_eq!(label, "도구", "a sub-ring slot takes the ring's name");
 		assert_eq!(version(&conn), SCHEMA_VERSION);
 		let (shortcut, quick): (Option<String>, Option<String>) = conn
 			.query_row(
