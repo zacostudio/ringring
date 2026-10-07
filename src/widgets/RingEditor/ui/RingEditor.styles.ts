@@ -18,6 +18,13 @@ export const Header = styled.div`
     gap: 10px;
 `;
 
+/* 단축키 칸 앞의 짧은 이름. 일반·빠른 두 칸을 가른다. */
+export const ShortcutLabel = styled.span`
+    flex-shrink: 0;
+    font-size: var(--text-meta);
+    color: var(--text-2);
+`;
+
 /* 링 이름. 제목처럼 보이고, 가리키면 배경이, 고칠 때만 accent 가 보인다. */
 export const NameInput = styled.input`
     flex: 1;

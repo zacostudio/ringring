@@ -29,8 +29,10 @@ export interface AppState {
 	accessibilityTrusted: boolean;
 	/** 키 입력 칸이 하나라도 있는가. */
 	usesKeystrokes: boolean;
-	/** 저장된 단축키를 OS 가 받지 않은 링의 id. 그 링의 단축키는 지금 걸려 있지 않다. */
+	/** 저장된 일반 단축키를 OS 가 받지 않은 링의 id. 그 링의 단축키는 지금 걸려 있지 않다. */
 	refusedShortcuts: string[];
+	/** 저장된 빠른 단축키를 OS 가 받지 않은 링의 id. */
+	refusedQuickShortcuts: string[];
 	/** 아직 보지 않은 실패의 수. 실행 기록 페이지를 열면 0 이 된다. */
 	unseenFailures: number;
 	/** 로그 파일의 경로. */

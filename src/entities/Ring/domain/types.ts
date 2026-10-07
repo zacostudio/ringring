@@ -10,6 +10,9 @@ export type RingAction =
 
 export type RingActionKind = RingAction["kind"];
 
+/** 링의 단축키 두 종류. Rust 의 `ShortcutKind` 와 같은 값이다. */
+export type ShortcutKind = "normal" | "quick";
+
 /** 칸 하나. `position` 0 이 12시 방향이고 시계 방향으로 자란다. */
 export interface RingSlot {
 	position: number;
@@ -25,8 +28,10 @@ export interface RingSlot {
 export interface Ring {
 	id: string;
 	name: string;
-	/** 전역 단축키. 없으면 다른 링의 칸이나 트레이 메뉴로 연다. */
+	/** 일반 단축키 — 링을 띄우기만 한다. 둘 다 없으면 다른 링의 칸이나 트레이 메뉴로 연다. */
 	shortcut: string | null;
+	/** 빠른 단축키 — F1~F24. 누른 채 방향을 잡고 떼면 그 칸을 실행한다. */
+	quickShortcut: string | null;
 	slotCount: number;
 	slots: RingSlot[];
 }

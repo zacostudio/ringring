@@ -53,7 +53,9 @@ export function SettingsSidebar({
 						onClick={() => onSelect({ kind: "ring", ringId: ring.id })}
 					>
 						<S.ItemName>{ring.name}</S.ItemName>
-						{ring.shortcut && <S.ItemMeta>{formatShortcut(ring.shortcut)}</S.ItemMeta>}
+						{(ring.shortcut ?? ring.quickShortcut) && (
+							<S.ItemMeta>{formatShortcut(ring.shortcut ?? ring.quickShortcut ?? "")}</S.ItemMeta>
+						)}
 					</S.Item>
 				))}
 				<S.Item type="button" data-role="ring-new" $selected={false} onClick={onCreateRing}>

@@ -31,6 +31,7 @@ export const RING_REFUSAL_CODES = [
 	"order_not_permutation",
 	"shortcut_invalid",
 	"shortcut_needs_modifier",
+	"shortcut_needs_function_key",
 	"shortcut_taken",
 	"shortcut_unavailable",
 	"import_unreadable",

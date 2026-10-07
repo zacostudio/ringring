@@ -46,14 +46,24 @@ export const en: Dictionary = {
 	"ring.shrink": "Reduce",
 	"ring.backTo": 'Back to "{name}", slot {n}',
 	"ring.noShortcutNote": "This ring has no shortcut. A slot in another ring or the menu bar menu opens it.",
-	"ring.shortcutNote": "Hold, move and release to run. Tap to keep the ring open, then click or press a number.",
+	"ring.shortcutLabel": "Shortcut",
+	"ring.quickShortcutLabel": "Quick",
+	"ring.shortcutNote":
+		"The shortcut shows the ring. Releasing the key runs nothing — click or press a number to choose.",
+	"ring.quickShortcutNote": "With the quick shortcut, hold, aim and release to run that slot at once.",
+	"ring.bareFunctionKeyNote":
+		"A bare F1–F12 takes that key from every other app. F5 will no longer reload a browser, for example.",
 	"ring.devNote": "Development builds do not register global shortcuts. The combination is saved.",
 	"ring.refusedNote": "Not registered: macOS refused this combination. Another app may hold it. Choose another one.",
+	"ring.refusedQuickNote":
+		"Not registered: macOS refused the quick shortcut. Another app may hold it. Choose another one.",
 	"ring.pausedNote": "Shortcuts are paused. Turn them back on from the menu bar menu or General.",
 	"ring.emptyNote": "No slot is filled, so the shortcut will not show this ring.",
 
 	"shortcut.none": "No shortcut",
 	"shortcut.capturing": "Press a combination",
+	"shortcut.quickNone": "No quick shortcut",
+	"shortcut.quickCapturing": "Press F1–F24",
 
 	"slot.title": "Slot {n}",
 	"slot.action": "What this slot does",
@@ -196,6 +206,7 @@ export const en: Dictionary = {
 	"refusal.order_not_permutation": "Could not change the slot order.",
 	"refusal.shortcut_invalid": "That key cannot be a global shortcut.",
 	"refusal.shortcut_needs_modifier": "Hold ⌘, ⌃ or ⌥ with it, so the shortcut does not swallow typing.",
+	"refusal.shortcut_needs_function_key": "A quick shortcut must be one of F1–F24, with or without modifier keys.",
 	"refusal.shortcut_taken": 'The ring "{name}" already uses that combination.',
 	"refusal.shortcut_unavailable": "macOS did not accept that combination. Another app may be using it.",
 	"refusal.import_unreadable": "This is not a file exported by RingRing.",
@@ -213,6 +224,8 @@ export const en: Dictionary = {
 	"other:open.fileHint": "A file opens in its default app. A folder opens in File Explorer.",
 	"other:permissions.lead": "RingRing needs no extra permission on Windows.",
 	"other:permissions.how": "Apps running as administrator do not receive the keystrokes RingRing sends.",
+	"other:ring.refusedQuickNote":
+		"Not registered: Windows refused the quick shortcut. Another app may hold it. Choose another one.",
 	"other:refusal.shortcut_needs_modifier": "Hold Ctrl, Alt or Win with it, so the shortcut does not swallow typing.",
 	"other:refusal.shortcut_unavailable": "Windows did not accept that combination. Another app may be using it.",
 	"other:ring.noShortcutNote": "This ring has no shortcut. A slot in another ring or the tray icon's menu opens it.",

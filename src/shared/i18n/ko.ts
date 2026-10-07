@@ -46,15 +46,24 @@ export const ko: Dictionary = {
 	"ring.shrink": "줄이기",
 	"ring.backTo": '"{name}" {n}번 칸으로 돌아가기',
 	"ring.noShortcutNote": "단축키가 없는 링입니다. 다른 링의 칸이나 메뉴 막대의 메뉴로 엽니다.",
-	"ring.shortcutNote": "누른 채 움직이고 놓으면 실행됩니다. 짧게 누르면 링이 남아 클릭이나 숫자 키로 고릅니다.",
+	"ring.shortcutLabel": "단축키",
+	"ring.quickShortcutLabel": "빠른 단축키",
+	"ring.shortcutNote": "단축키를 누르면 링이 뜹니다. 키를 떼도 실행되지 않습니다. 클릭이나 숫자 키로 고릅니다.",
+	"ring.quickShortcutNote": "빠른 단축키는 누른 채 방향을 잡고 떼면 그 칸을 바로 실행합니다.",
+	"ring.bareFunctionKeyNote":
+		"수식키 없는 F1~F12 는 다른 앱의 그 키를 가져갑니다. 예를 들어 브라우저의 F5 새로 고침이 되지 않습니다.",
 	"ring.devNote": "개발 빌드는 전역 단축키를 등록하지 않습니다. 조합은 저장됩니다.",
 	"ring.refusedNote":
 		"등록되지 않음: macOS 가 이 조합을 받지 않았습니다. 다른 앱이 쓰는 조합일 수 있습니다. 다른 조합을 고르세요.",
+	"ring.refusedQuickNote":
+		"등록되지 않음: macOS 가 빠른 단축키를 받지 않았습니다. 다른 앱이 쓰는 조합일 수 있습니다. 다른 조합을 고르세요.",
 	"ring.pausedNote": "단축키가 일시 정지돼 있습니다. 메뉴 막대의 메뉴나 일반 설정에서 다시 켭니다.",
 	"ring.emptyNote": "채운 칸이 없어 단축키를 눌러도 링이 뜨지 않습니다.",
 
 	"shortcut.none": "단축키 없음",
 	"shortcut.capturing": "조합을 누르세요",
+	"shortcut.quickNone": "빠른 단축키 없음",
+	"shortcut.quickCapturing": "F1~F24 를 누르세요",
 
 	"slot.title": "{n}번 칸",
 	"slot.action": "이 칸이 할 일",
@@ -195,6 +204,8 @@ export const ko: Dictionary = {
 	"refusal.shortcut_invalid": "전역 단축키로 쓸 수 없는 키입니다.",
 	"refusal.shortcut_needs_modifier":
 		"⌘, ⌃, ⌥ 가운데 하나를 함께 눌러야 합니다. 글 입력을 가로채지 않게 하려는 것입니다.",
+	"refusal.shortcut_needs_function_key":
+		"빠른 단축키는 F1~F24 가운데 하나여야 합니다. 수식키는 함께 눌러도 되고 빼도 됩니다.",
 	"refusal.shortcut_taken": '"{name}" 링이 이미 쓰는 조합입니다.',
 	"refusal.shortcut_unavailable": "macOS 가 이 조합을 받지 않았습니다. 다른 앱이 쓰고 있을 수 있습니다.",
 	"refusal.import_unreadable": "링링이가 내보낸 파일이 아닙니다.",
@@ -212,6 +223,8 @@ export const ko: Dictionary = {
 	"other:open.fileHint": "파일은 기본 앱으로 열립니다. 폴더는 파일 탐색기에서 열립니다.",
 	"other:permissions.lead": "Windows 에서는 따로 받아야 하는 권한이 없습니다.",
 	"other:permissions.how": "관리자 권한으로 실행 중인 앱은 링링이가 보내는 키 입력을 받지 않습니다.",
+	"other:ring.refusedQuickNote":
+		"등록되지 않음: Windows 가 빠른 단축키를 받지 않았습니다. 다른 앱이 쓰는 조합일 수 있습니다. 다른 조합을 고르세요.",
 	"other:refusal.shortcut_needs_modifier":
 		"Ctrl, Alt, Win 가운데 하나를 함께 눌러야 합니다. 글 입력을 가로채지 않게 하려는 것입니다.",
 	"other:refusal.shortcut_unavailable": "Windows 가 이 조합을 받지 않았습니다. 다른 앱이 쓰고 있을 수 있습니다.",

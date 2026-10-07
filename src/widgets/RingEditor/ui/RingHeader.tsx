@@ -1,9 +1,9 @@
-// 링 편집기의 머리줄 — 이름, 전역 단축키, 띄워 보기, 삭제. 그 아래 한 줄이 이 링이 어떻게 열리는지 말한다
+// 링 편집기의 머리줄 — 이름, 일반·빠른 단축키, 띄워 보기, 삭제. 그 아래 한 줄이 이 링이 어떻게 열리는지 말한다
 import { useEffect, useRef, useState } from "react";
 import { appRepository } from "@/entities/AppState";
 import type { AppState } from "@/entities/AppState";
 import { ringFailureText, ringRepository } from "@/entities/Ring";
-import type { Ring, RingLimits } from "@/entities/Ring";
+import type { Ring, RingLimits, ShortcutKind } from "@/entities/Ring";
 import { useT } from "@/shared/i18n";
 import { registerLeaveGuard } from "@/shared/lib/leaveGuard";
 import { showToast } from "@/shared/lib/toast";
@@ -11,6 +11,11 @@ import { Button } from "@/shared/ui/Button";
 import { IconButton } from "@/shared/ui/IconButton";
 import { ShortcutField } from "@/shared/ui/ShortcutField";
 import * as S from "./RingEditor.styles";
+
+/** 수식키 없는 F1~F12 인가. 다른 앱의 그 키를 가져가므로 알린다. 쓸 수 있는지는 Rust 가 정한다. */
+function isBareSystemFunctionKey(shortcut: string): boolean {
+	return /^F([1-9]|1[0-2])$/.test(shortcut);
+}
 
 interface RingHeaderProps {
 	ring: Ring;
@@ -63,9 +68,9 @@ export function RingHeader({ ring, limits, appState, onRingChanged, onReload }: 
 
 	// **등록이 먼저다.** Rust 가 OS 에 등록한 뒤에만 저장한다. 거절되면 화면의 값은 그대로다.
 	// 입력받기를 끝내는 것도 이 command 가 Rust 에서 한다 — 화면이 보내는 "끝" 과 순서를 다투지 않는다.
-	const setShortcut = async (shortcut: string | null) => {
+	const setShortcut = async (kind: ShortcutKind, shortcut: string | null) => {
 		try {
-			await ringRepository.setShortcut(ring.id, shortcut);
+			await ringRepository.setShortcut(ring.id, kind, shortcut);
 			setShortcutError(null);
 			await onReload();
 		} catch (error) {
@@ -99,12 +104,19 @@ export function RingHeader({ ring, limits, appState, onRingChanged, onReload }: 
 	const note = (): { text: string; tone?: "error" | "warn" } => {
 		if (nameError) return { text: nameError, tone: "error" };
 		if (shortcutError) return { text: shortcutError, tone: "error" };
-		if (!ring.shortcut) return { text: t("ring.noShortcutNote") };
+		if (!ring.shortcut && !ring.quickShortcut) return { text: t("ring.noShortcutNote") };
 		if (!appState.shortcutsRegister) return { text: t("ring.devNote"), tone: "warn" };
 		if (appState.paused) return { text: t("ring.pausedNote"), tone: "warn" };
 		if (appState.refusedShortcuts.includes(ring.id)) return { text: t("ring.refusedNote"), tone: "error" };
+		if (appState.refusedQuickShortcuts.includes(ring.id)) {
+			return { text: t("ring.refusedQuickNote"), tone: "error" };
+		}
 		if (ring.slots.length === 0) return { text: t("ring.emptyNote"), tone: "warn" };
-		return { text: t("ring.shortcutNote") };
+		if (ring.quickShortcut && isBareSystemFunctionKey(ring.quickShortcut)) {
+			return { text: t("ring.bareFunctionKeyNote"), tone: "warn" };
+		}
+		const notes = [ring.shortcut && t("ring.shortcutNote"), ring.quickShortcut && t("ring.quickShortcutNote")];
+		return { text: notes.filter(Boolean).join(" ") };
 	};
 	const shown = note();
 
@@ -137,6 +149,7 @@ export function RingHeader({ ring, limits, appState, onRingChanged, onReload }: 
 					</>
 				) : (
 					<>
+						<S.ShortcutLabel>{t("ring.shortcutLabel")}</S.ShortcutLabel>
 						<ShortcutField
 							mode="global"
 							value={ring.shortcut}
@@ -146,8 +159,21 @@ export function RingHeader({ ring, limits, appState, onRingChanged, onReload }: 
 								clear: t("common.clear")
 							}}
 							onCapture={(active, id) => void appRepository.shortcutCapture(active, id).catch(() => {})}
-							onChange={(shortcut) => void setShortcut(shortcut)}
-							onClear={() => void setShortcut(null)}
+							onChange={(shortcut) => void setShortcut("normal", shortcut)}
+							onClear={() => void setShortcut("normal", null)}
+						/>
+						<S.ShortcutLabel>{t("ring.quickShortcutLabel")}</S.ShortcutLabel>
+						<ShortcutField
+							mode="global"
+							value={ring.quickShortcut}
+							texts={{
+								empty: t("shortcut.quickNone"),
+								capturing: t("shortcut.quickCapturing"),
+								clear: t("common.clear")
+							}}
+							onCapture={(active, id) => void appRepository.shortcutCapture(active, id).catch(() => {})}
+							onChange={(shortcut) => void setShortcut("quick", shortcut)}
+							onClear={() => void setShortcut("quick", null)}
 						/>
 						<Button data-role="ring-try" disabled={ring.slots.length === 0} onClick={tryIt}>
 							{t("ring.tryIt")}

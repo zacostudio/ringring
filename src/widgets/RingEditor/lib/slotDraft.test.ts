@@ -11,7 +11,7 @@ const slot: RingSlot = {
 	confirm: false
 };
 
-const ring: Ring = { id: "a", name: "작업", shortcut: null, slotCount: 6, slots: [slot] };
+const ring: Ring = { id: "a", name: "작업", shortcut: null, quickShortcut: null, slotCount: 6, slots: [slot] };
 
 describe("slot draft", () => {
 	test("finds the slot stored at a position", () => {

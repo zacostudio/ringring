@@ -8,7 +8,8 @@ import type {
 	RingShow,
 	RingSlot,
 	RingSlotRef,
-	RingSubRingCreated
+	RingSubRingCreated,
+	ShortcutKind
 } from "./types";
 
 export interface RingRepository {
@@ -19,8 +20,8 @@ export interface RingRepository {
 	createStarter(): Promise<Ring>;
 	/** 이름과 칸 수. 칸 수를 줄이면 넘치는 칸은 지워진다. */
 	save(ringId: string, name: string, slotCount: number): Promise<Ring>;
-	/** 전역 단축키. `null` 이면 뗀다. 쓸 수 없는 조합이면 저장되지 않고 reject 된다. */
-	setShortcut(ringId: string, shortcut: string | null): Promise<void>;
+	/** `kind` 의 전역 단축키. `null` 이면 뗀다. 쓸 수 없는 조합이면 저장되지 않고 reject 된다. */
+	setShortcut(ringId: string, kind: ShortcutKind, shortcut: string | null): Promise<void>;
 	saveSlot(ringId: string, slot: RingSlot): Promise<Ring>;
 	clearSlot(ringId: string, position: number): Promise<Ring>;
 	/** `order[새 자리] = 예전 자리`. */

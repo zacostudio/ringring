@@ -47,15 +47,25 @@ export const ja: Dictionary = {
 	"ring.backTo": "「{name}」のスロット {n} に戻る",
 	"ring.noShortcutNote":
 		"ショートカットのないリングです。ほかのリングのスロットかメニューバーのメニューから開きます。",
-	"ring.shortcutNote": "押したまま動かして離すと実行します。短く押すとリングが残り、クリックか数字キーで選びます。",
+	"ring.shortcutLabel": "ショートカット",
+	"ring.quickShortcutLabel": "クイック",
+	"ring.shortcutNote":
+		"ショートカットを押すとリングが出ます。キーを離しても実行しません。クリックか数字キーで選びます。",
+	"ring.quickShortcutNote": "クイックショートカットは押したまま方向を決めて離すと、そのスロットをすぐ実行します。",
+	"ring.bareFunctionKeyNote":
+		"修飾キーなしの F1〜F12 は、ほかのアプリからそのキーを奪います。たとえばブラウザの F5 の再読み込みが効かなくなります。",
 	"ring.devNote": "開発ビルドはグローバルショートカットを登録しません。組み合わせは保存されます。",
 	"ring.refusedNote":
 		"未登録: macOS がこの組み合わせを受け付けませんでした。他のアプリが使っている可能性があります。別の組み合わせを選んでください。",
+	"ring.refusedQuickNote":
+		"未登録: macOS がクイックショートカットを受け付けませんでした。他のアプリが使っている可能性があります。別の組み合わせを選んでください。",
 	"ring.pausedNote": "ショートカットは一時停止中です。メニューバーのメニューか一般設定で再開します。",
 	"ring.emptyNote": "設定済みのスロットがないため、ショートカットを押してもリングは出ません。",
 
 	"shortcut.none": "ショートカットなし",
 	"shortcut.capturing": "組み合わせを押してください",
+	"shortcut.quickNone": "クイックショートカットなし",
+	"shortcut.quickCapturing": "F1〜F24 を押してください",
 
 	"slot.title": "スロット {n}",
 	"slot.action": "このスロットがすること",
@@ -199,6 +209,8 @@ export const ja: Dictionary = {
 	"refusal.order_not_permutation": "スロットの順序を変更できませんでした。",
 	"refusal.shortcut_invalid": "グローバルショートカットに使えないキーです。",
 	"refusal.shortcut_needs_modifier": "⌘、⌃、⌥ のどれかを一緒に押してください。文字入力を奪わないためです。",
+	"refusal.shortcut_needs_function_key":
+		"クイックショートカットは F1〜F24 のどれかにしてください。修飾キーはあってもなくてもかまいません。",
 	"refusal.shortcut_taken": "リング「{name}」がすでに使っている組み合わせです。",
 	"refusal.shortcut_unavailable":
 		"macOS がこの組み合わせを受け付けませんでした。ほかのアプリが使っている可能性があります。",
@@ -217,6 +229,8 @@ export const ja: Dictionary = {
 	"other:open.fileHint": "ファイルはデフォルトのアプリで開きます。フォルダはエクスプローラーで開きます。",
 	"other:permissions.lead": "Windows では、別に受ける権限はありません。",
 	"other:permissions.how": "管理者として実行中のアプリは、RingRing が送るキー入力を受け取りません。",
+	"other:ring.refusedQuickNote":
+		"未登録: Windows がクイックショートカットを受け付けませんでした。他のアプリが使っている可能性があります。別の組み合わせを選んでください。",
 	"other:refusal.shortcut_needs_modifier":
 		"Ctrl、Alt、Win のどれかを一緒に押してください。文字入力を奪わないためです。",
 	"other:refusal.shortcut_unavailable":
