@@ -1097,6 +1097,7 @@ mod tests {
 			id: "r".to_string(),
 			name: "작업".to_string(),
 			shortcut: None,
+			quick_shortcut: None,
 			slot_count: 4,
 			slots: vec![
 				Slot {

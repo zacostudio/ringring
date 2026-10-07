@@ -8,7 +8,7 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use rusqlite::Connection;
 
 /// 지금 코드가 아는 스키마 버전.
-pub const SCHEMA_VERSION: i64 = 1;
+pub const SCHEMA_VERSION: i64 = 2;
 
 /// DB 연결 하나. Tauri state 로 둔다.
 #[derive(Clone)]
@@ -105,6 +105,22 @@ pub fn ensure_schema(conn: &Connection) -> Result<(), String> {
 		log::info!("[store] schema v1 created");
 	}
 
+	// v2 — 빠른 단축키. NULL 이면 없다. 일반 단축키(`shortcut`)와 따로 정한다.
+	//
+	// SQLite 는 `ADD COLUMN` 에 UNIQUE 를 받지 않는다. 그래서 unique index 를 따로 만든다. NULL 은 여럿이어도 된다.
+	if version < 2 {
+		conn.execute_batch(
+			"BEGIN;
+			ALTER TABLE rings ADD COLUMN quick_shortcut TEXT;
+			CREATE UNIQUE INDEX rings_quick_shortcut ON rings(quick_shortcut);
+			DELETE FROM schema_version;
+			INSERT INTO schema_version (version) VALUES (2);
+			COMMIT;",
+		)
+		.map_err(|e| format!("DB migration v2 failed: {e}"))?;
+		log::info!("[store] schema v2 — quick_shortcut added");
+	}
+
 	Ok(())
 }
 
@@ -157,6 +173,48 @@ mod tests {
 			)
 			.unwrap();
 		assert_eq!(kept, "dark");
+	}
+
+	#[test]
+	fn a_v1_database_gains_the_quick_shortcut_and_keeps_its_shortcuts() {
+		let conn = Connection::open_in_memory().unwrap();
+		ensure_schema(&conn).unwrap();
+		// v1 로 되돌린다 — v2 가 더한 것을 뺀다.
+		conn.execute_batch(
+			"DROP INDEX rings_quick_shortcut;
+			ALTER TABLE rings DROP COLUMN quick_shortcut;
+			UPDATE schema_version SET version = 1;
+			INSERT INTO rings (id, name, shortcut, slot_count, sort_order, updated_at)
+			VALUES ('a', 'a', 'Alt+Space', 6, 0, '');",
+		)
+		.unwrap();
+		ensure_schema(&conn).unwrap();
+		assert_eq!(version(&conn), SCHEMA_VERSION);
+		let (shortcut, quick): (Option<String>, Option<String>) = conn
+			.query_row(
+				"SELECT shortcut, quick_shortcut FROM rings WHERE id = 'a'",
+				[],
+				|row| Ok((row.get(0)?, row.get(1)?)),
+			)
+			.unwrap();
+		assert_eq!(shortcut.as_deref(), Some("Alt+Space"));
+		assert_eq!(quick, None);
+	}
+
+	#[test]
+	fn two_rings_cannot_hold_the_same_quick_shortcut_but_many_can_have_none() {
+		let conn = Connection::open_in_memory().unwrap();
+		ensure_schema(&conn).unwrap();
+		conn.execute_batch(
+			"INSERT INTO rings (id, name, slot_count, sort_order, updated_at) VALUES ('a', 'a', 6, 0, '');
+			INSERT INTO rings (id, name, slot_count, sort_order, updated_at) VALUES ('b', 'b', 6, 1, '');
+			UPDATE rings SET quick_shortcut = 'F5' WHERE id = 'a';",
+		)
+		.unwrap();
+		assert!(
+			conn.execute("UPDATE rings SET quick_shortcut = 'F5' WHERE id = 'b'", [])
+				.is_err()
+		);
 	}
 
 	#[test]

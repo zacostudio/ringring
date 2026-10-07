@@ -181,6 +181,7 @@ pub fn plan(
 			id,
 			name: incoming.name.trim().to_string(),
 			shortcut,
+			quick_shortcut: None,
 			slot_count: incoming.slot_count,
 			slots,
 		});
@@ -253,6 +254,7 @@ mod tests {
 			id: "here".to_string(),
 			name: "있던 링".to_string(),
 			shortcut: Some(combo.to_string()),
+			quick_shortcut: None,
 			slot_count: 6,
 			slots: Vec::new(),
 		}
@@ -264,6 +266,7 @@ mod tests {
 			id: "old".to_string(),
 			name: "작업".to_string(),
 			shortcut: Some("Alt+Space".to_string()),
+			quick_shortcut: None,
 			slot_count: 4,
 			slots: vec![Slot {
 				position: 2,

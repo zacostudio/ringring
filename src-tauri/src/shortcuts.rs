@@ -17,7 +17,7 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut,
 
 use crate::constants::events;
 use crate::ring::controller;
-use crate::ring::model::{Refusal, Ring, RingError};
+use crate::ring::model::{Refusal, Ring, RingError, ShortcutKind};
 use crate::store::{Db, rings as ring_store};
 
 // ── 조합을 입력받는 동안 ───────────────────────────────────────────────
@@ -500,7 +500,9 @@ impl ShortcutSteps for LiveSteps<'_> {
 	async fn save(&mut self, ring_id: &str, combo: Option<&str>) -> Result<(), RingError> {
 		let (id, combo) = (ring_id.to_string(), combo.map(str::to_string));
 		self.db
-			.with(move |conn| ring_store::set_shortcut(conn, &id, combo.as_deref()))
+			.with(move |conn| {
+				ring_store::set_shortcut(conn, &id, ShortcutKind::Normal, combo.as_deref())
+			})
 			.await
 			.map_err(RingError::Other)
 			.and_then(|result| result)
@@ -607,6 +609,7 @@ mod tests {
 			id: id.to_string(),
 			name: name.to_string(),
 			shortcut: combo.map(str::to_string),
+			quick_shortcut: None,
 			slot_count: 6,
 			slots: Vec::new(),
 		}

@@ -13,7 +13,8 @@ use rusqlite::{Connection, OptionalExtension, params};
 use serde::Serialize;
 
 use crate::ring::model::{
-	self, Named, Refusal, Ring, RingAction, RingError, Slot, check_name, check_slot_count,
+	self, Named, Refusal, Ring, RingAction, RingError, ShortcutKind, Slot, check_name,
+	check_slot_count,
 };
 
 /// 이 파일의 함수가 돌려주는 값. 거절이면 [`Refusal`] 이고, DB 오류면 그 원문이다.
@@ -82,6 +83,7 @@ fn ring_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Ring> {
 		id: row.get(0)?,
 		name: row.get(1)?,
 		shortcut: row.get(2)?,
+		quick_shortcut: row.get(4)?,
 		slot_count: row.get::<_, i64>(3)? as usize,
 		slots: Vec::new(),
 	})
@@ -89,9 +91,9 @@ fn ring_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Ring> {
 
 /// 링 전체. 만든 순서다.
 pub fn list(conn: &Connection) -> Outcome<Vec<Ring>> {
-	let mut stmt =
-		sql(conn
-			.prepare("SELECT id, name, shortcut, slot_count FROM rings ORDER BY sort_order, id"))?;
+	let mut stmt = sql(conn.prepare(
+		"SELECT id, name, shortcut, slot_count, quick_shortcut FROM rings ORDER BY sort_order, id",
+	))?;
 	let rings = sql(stmt.query_map([], ring_from_row))?;
 	let mut out = Vec::new();
 	for ring in rings {
@@ -105,7 +107,7 @@ pub fn list(conn: &Connection) -> Outcome<Vec<Ring>> {
 pub fn get(conn: &Connection, id: &str) -> Outcome<Option<Ring>> {
 	let ring = sql(conn
 		.query_row(
-			"SELECT id, name, shortcut, slot_count FROM rings WHERE id = ?1",
+			"SELECT id, name, shortcut, slot_count, quick_shortcut FROM rings WHERE id = ?1",
 			params![id],
 			ring_from_row,
 		)
@@ -228,12 +230,20 @@ pub fn update(conn: &Connection, id: &str, name: &str, slot_count: usize) -> Out
 	require(conn, id)
 }
 
-/// 단축키를 바꾼다. `None` 이면 뗀다. 조합의 충돌 검사와 OS 등록은 호출자가 먼저 한다.
-pub fn set_shortcut(conn: &Connection, id: &str, shortcut: Option<&str>) -> Outcome<()> {
-	let changed = sql(conn.execute(
-		"UPDATE rings SET shortcut = ?2, updated_at = ?3 WHERE id = ?1",
-		params![id, shortcut, now()],
-	))?;
+/// `kind` 의 단축키를 바꾼다. `None` 이면 뗀다. 조합의 충돌 검사와 OS 등록은 호출자가 먼저 한다.
+pub fn set_shortcut(
+	conn: &Connection,
+	id: &str,
+	kind: ShortcutKind,
+	shortcut: Option<&str>,
+) -> Outcome<()> {
+	let statement = match kind {
+		ShortcutKind::Normal => "UPDATE rings SET shortcut = ?2, updated_at = ?3 WHERE id = ?1",
+		ShortcutKind::Quick => {
+			"UPDATE rings SET quick_shortcut = ?2, updated_at = ?3 WHERE id = ?1"
+		}
+	};
+	let changed = sql(conn.execute(statement, params![id, shortcut, now()]))?;
 	if changed == 0 {
 		return Err(Refusal::RingGone.into());
 	}
@@ -444,8 +454,13 @@ pub fn import(conn: &Connection, rings: &[Ring]) -> Outcome<()> {
 	for ring in rings {
 		insert_ring(&tx, &ring.id, &ring.name)?;
 		sql(tx.execute(
-			"UPDATE rings SET shortcut = ?2, slot_count = ?3 WHERE id = ?1",
-			params![ring.id, ring.shortcut, ring.slot_count as i64],
+			"UPDATE rings SET shortcut = ?2, quick_shortcut = ?3, slot_count = ?4 WHERE id = ?1",
+			params![
+				ring.id,
+				ring.shortcut,
+				ring.quick_shortcut,
+				ring.slot_count as i64
+			],
 		))?;
 		for slot in &ring.slots {
 			insert_slot(&tx, &ring.id, slot)?;
@@ -853,14 +868,30 @@ mod tests {
 	fn set_shortcut_stores_and_clears_the_combination() {
 		let c = conn();
 		ring(&c, "a");
-		set_shortcut(&c, "a", Some("Alt+Space")).unwrap();
+		set_shortcut(&c, "a", ShortcutKind::Normal, Some("Alt+Space")).unwrap();
 		assert_eq!(
 			get(&c, "a").unwrap().unwrap().shortcut.as_deref(),
 			Some("Alt+Space")
 		);
-		set_shortcut(&c, "a", None).unwrap();
+		set_shortcut(&c, "a", ShortcutKind::Normal, None).unwrap();
 		assert_eq!(get(&c, "a").unwrap().unwrap().shortcut, None);
-		assert!(set_shortcut(&c, "ghost", Some("Alt+Space")).is_err());
+		assert!(set_shortcut(&c, "ghost", ShortcutKind::Normal, Some("Alt+Space")).is_err());
+	}
+
+	#[test]
+	fn the_quick_shortcut_is_stored_apart_from_the_normal_one() {
+		let c = conn();
+		ring(&c, "a");
+		set_shortcut(&c, "a", ShortcutKind::Normal, Some("Alt+Space")).unwrap();
+		set_shortcut(&c, "a", ShortcutKind::Quick, Some("F5")).unwrap();
+		let saved = get(&c, "a").unwrap().unwrap();
+		assert_eq!(saved.shortcut.as_deref(), Some("Alt+Space"));
+		assert_eq!(saved.quick_shortcut.as_deref(), Some("F5"));
+		set_shortcut(&c, "a", ShortcutKind::Quick, None).unwrap();
+		let saved = get(&c, "a").unwrap().unwrap();
+		assert_eq!(saved.shortcut.as_deref(), Some("Alt+Space"));
+		assert_eq!(saved.quick_shortcut, None);
+		assert_eq!(list(&c).unwrap()[0].quick_shortcut, None);
 	}
 
 	#[test]
@@ -868,8 +899,8 @@ mod tests {
 		let c = conn();
 		ring(&c, "a");
 		ring(&c, "b");
-		set_shortcut(&c, "a", Some("Alt+Space")).unwrap();
-		assert!(set_shortcut(&c, "b", Some("Alt+Space")).is_err());
+		set_shortcut(&c, "a", ShortcutKind::Normal, Some("Alt+Space")).unwrap();
+		assert!(set_shortcut(&c, "b", ShortcutKind::Normal, Some("Alt+Space")).is_err());
 	}
 
 	#[test]
@@ -880,6 +911,7 @@ mod tests {
 			id: "new".to_string(),
 			name: "가져온 링".to_string(),
 			shortcut: Some("Alt+KeyR".to_string()),
+			quick_shortcut: Some("F5".to_string()),
 			slot_count: 8,
 			slots: vec![url_slot(7, "끝")],
 		};
@@ -891,11 +923,18 @@ mod tests {
 	#[test]
 	fn import_leaves_nothing_when_one_ring_fails() {
 		let c = conn();
-		set_shortcut(&c, &ring(&c, "a").id, Some("Alt+Space")).unwrap();
+		set_shortcut(
+			&c,
+			&ring(&c, "a").id,
+			ShortcutKind::Normal,
+			Some("Alt+Space"),
+		)
+		.unwrap();
 		let ok = Ring {
 			id: "x".to_string(),
 			name: "x".to_string(),
 			shortcut: None,
+			quick_shortcut: None,
 			slot_count: 6,
 			slots: Vec::new(),
 		};
@@ -903,6 +942,7 @@ mod tests {
 			id: "y".to_string(),
 			name: "y".to_string(),
 			shortcut: Some("Alt+Space".to_string()),
+			quick_shortcut: None,
 			slot_count: 6,
 			slots: Vec::new(),
 		};

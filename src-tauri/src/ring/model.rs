@@ -34,6 +34,7 @@ pub enum Refusal {
 	OrderNotPermutation,
 	ShortcutInvalid,
 	ShortcutNeedsModifier,
+	ShortcutNeedsFunctionKey,
 	ShortcutTaken,
 	ShortcutUnavailable,
 	ImportUnreadable,
@@ -69,6 +70,7 @@ impl Refusal {
 			Self::OrderNotPermutation => "order_not_permutation",
 			Self::ShortcutInvalid => "shortcut_invalid",
 			Self::ShortcutNeedsModifier => "shortcut_needs_modifier",
+			Self::ShortcutNeedsFunctionKey => "shortcut_needs_function_key",
 			Self::ShortcutTaken => "shortcut_taken",
 			Self::ShortcutUnavailable => "shortcut_unavailable",
 			Self::ImportUnreadable => "import_unreadable",
@@ -128,6 +130,9 @@ impl std::fmt::Display for Refusal {
 			Self::OrderNotPermutation => write!(f, "The new order must list every slot once"),
 			Self::ShortcutInvalid => write!(f, "That key combination cannot be a global shortcut"),
 			Self::ShortcutNeedsModifier => write!(f, "A global shortcut needs a modifier key"),
+			Self::ShortcutNeedsFunctionKey => {
+				write!(f, "A quick shortcut must be a function key (F1-F24)")
+			}
 			Self::ShortcutTaken => write!(f, "Another ring already uses that shortcut"),
 			Self::ShortcutUnavailable => write!(f, "The system refused that shortcut"),
 			Self::ImportUnreadable => write!(f, "The file is not a RingRing export"),
@@ -389,19 +394,40 @@ impl Slot {
 	}
 }
 
+/// 링의 전역 단축키 두 종류.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ShortcutKind {
+	/// 링을 띄우기만 한다. 키를 떼도 실행하지 않는다 — 링이 남아 클릭이나 키로 고른다.
+	Normal,
+	/// F1~F24. 누른 채 방향을 잡고 떼면 그 칸을 실행한다.
+	Quick,
+}
+
 /// 링 하나와 그 칸들. 칸은 `position` 순서다. 행이 없는 자리는 빈 칸이다.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Ring {
 	pub id: String,
 	pub name: String,
-	/// 없으면 하위 링 전용이다.
+	/// 일반 단축키. 두 단축키가 다 없으면 하위 링이나 트레이 메뉴로만 연다.
 	pub shortcut: Option<String>,
+	/// 빠른 단축키.
+	#[serde(default)]
+	pub quick_shortcut: Option<String>,
 	pub slot_count: usize,
 	pub slots: Vec<Slot>,
 }
 
 impl Ring {
+	/// 그 종류의 단축키.
+	pub fn shortcut_of(&self, kind: ShortcutKind) -> Option<&str> {
+		match kind {
+			ShortcutKind::Normal => self.shortcut.as_deref(),
+			ShortcutKind::Quick => self.quick_shortcut.as_deref(),
+		}
+	}
+
 	/// `position` 자리의 칸. 빈 칸이면 `None`.
 	pub fn slot(&self, position: usize) -> Option<&Slot> {
 		self.slots.iter().find(|slot| slot.position == position)
