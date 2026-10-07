@@ -11,7 +11,7 @@ use super::model::{
 	Named, OpenTarget, Refusal, Ring, RingAction, ShortcutKind, Slot, check_link, check_name,
 	check_slot_count,
 };
-use crate::shortcuts::parse_for_registration;
+use crate::shortcuts::parse_for;
 
 /// 파일의 `format` 칸. 다른 값이면 이 앱의 파일이 아니다.
 pub const FORMAT: &str = "ringring.rings";
@@ -59,6 +59,9 @@ struct ImportRing {
 	name: String,
 	#[serde(default)]
 	shortcut: Option<String>,
+	/// 빠른 단축키. 이 칸이 생기기 전의 파일에는 없다.
+	#[serde(default)]
+	quick_shortcut: Option<String>,
 	slot_count: usize,
 	#[serde(default)]
 	slots: Vec<serde_json::Value>,
@@ -126,9 +129,11 @@ pub fn plan(
 		}
 	}
 
+	// 일반·빠른 단축키는 같은 조합을 다툰다. 하나의 목록으로 본다.
 	let mut taken: Vec<Shortcut> = existing
 		.iter()
-		.filter_map(|ring| ring.shortcut.as_deref()?.parse().ok())
+		.flat_map(|ring| [ring.shortcut.as_deref(), ring.quick_shortcut.as_deref()])
+		.filter_map(|combo| combo?.parse().ok())
 		.collect();
 	let mut summary = ImportSummary::default();
 	let mut edges: Vec<(String, String)> = Vec::new();
@@ -136,17 +141,22 @@ pub fn plan(
 
 	for incoming in &file.rings {
 		let id = ids[incoming.id.as_str()].clone();
-		let shortcut = incoming.shortcut.as_deref().and_then(|combo| {
-			let parsed = parse_for_registration(combo).ok()?;
-			if taken.iter().any(|used| same_combo(used, &parsed)) {
-				return None;
+		let mut accept = |kind: ShortcutKind, combo: Option<&str>| -> Option<String> {
+			let combo = combo?;
+			let kept = parse_for(kind, combo)
+				.ok()
+				.filter(|parsed| !taken.iter().any(|used| same_combo(used, parsed)))
+				.map(|parsed| {
+					taken.push(parsed);
+					combo.to_string()
+				});
+			if kept.is_none() {
+				summary.dropped_shortcuts += 1;
 			}
-			taken.push(parsed);
-			Some(combo.to_string())
-		});
-		if incoming.shortcut.is_some() && shortcut.is_none() {
-			summary.dropped_shortcuts += 1;
-		}
+			kept
+		};
+		let shortcut = accept(ShortcutKind::Normal, incoming.shortcut.as_deref());
+		let quick_shortcut = accept(ShortcutKind::Quick, incoming.quick_shortcut.as_deref());
 
 		let mut used_positions = HashSet::new();
 		let mut slots = Vec::new();
@@ -182,7 +192,7 @@ pub fn plan(
 			id,
 			name: incoming.name.trim().to_string(),
 			shortcut,
-			quick_shortcut: None,
+			quick_shortcut,
 			slot_count: incoming.slot_count,
 			slots,
 		});
@@ -270,7 +280,7 @@ mod tests {
 			id: "old".to_string(),
 			name: "작업".to_string(),
 			shortcut: Some("Alt+Space".to_string()),
-			quick_shortcut: None,
+			quick_shortcut: Some("Ctrl+F5".to_string()),
 			slot_count: 4,
 			slots: vec![Slot {
 				position: 2,
@@ -475,5 +485,43 @@ mod tests {
 			.collect();
 		assert_eq!(shortcuts, [None, Some("Alt+KeyR"), None, None, None]);
 		assert_eq!(planned.summary.dropped_shortcuts, 3);
+	}
+
+	#[test]
+	fn a_quick_shortcut_is_imported_and_shares_the_taken_combos_with_normal_ones() {
+		let text = file(serde_json::json!([
+			{ "id": "a", "name": "a", "slotCount": 6, "quickShortcut": "F5" },
+			// 있던 링의 일반 단축키와 같다.
+			{ "id": "b", "name": "b", "slotCount": 6, "quickShortcut": "Ctrl+F6" },
+			// 파일 안의 다른 링이 먼저 가져갔다.
+			{ "id": "c", "name": "c", "slotCount": 6, "shortcut": "Alt+KeyR", "quickShortcut": "F5" },
+			// F 키가 아니다.
+			{ "id": "d", "name": "d", "slotCount": 6, "quickShortcut": "Alt+KeyQ" },
+			// 같은 링의 일반 단축키와 같다.
+			{ "id": "e", "name": "e", "slotCount": 6, "shortcut": "Alt+F7", "quickShortcut": "Alt+F7" }
+		]));
+		let planned = plan(&text, &[existing("Ctrl+F6")], ids()).unwrap();
+		let quick: Vec<Option<&str>> = planned
+			.rings
+			.iter()
+			.map(|ring| ring.quick_shortcut.as_deref())
+			.collect();
+		assert_eq!(quick, [Some("F5"), None, None, None, None]);
+		assert_eq!(planned.rings[2].shortcut.as_deref(), Some("Alt+KeyR"));
+		assert_eq!(planned.rings[4].shortcut.as_deref(), Some("Alt+F7"));
+		assert_eq!(planned.summary.dropped_shortcuts, 4);
+	}
+
+	#[test]
+	fn a_quick_shortcut_of_an_existing_ring_is_taken() {
+		let mut here = existing("Alt+Space");
+		here.quick_shortcut = Some("F9".to_string());
+		let text = file(serde_json::json!([
+			{ "id": "a", "name": "a", "slotCount": 6, "shortcut": "Alt+F9", "quickShortcut": "F9" }
+		]));
+		let planned = plan(&text, &[here], ids()).unwrap();
+		assert_eq!(planned.rings[0].quick_shortcut, None);
+		assert_eq!(planned.rings[0].shortcut.as_deref(), Some("Alt+F9"));
+		assert_eq!(planned.summary.dropped_shortcuts, 1);
 	}
 }
