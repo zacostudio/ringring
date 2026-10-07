@@ -2,7 +2,8 @@
 //
 // 상태는 셋이다.
 //
-//   숨음 ──단축키 누름──> Holding
+//   숨음 ──빠른 단축키 누름──> Holding
+//   숨음 ──일반 단축키 누름──> Open   (키를 떼도 아무 일이 없다. 뗄 때까지의 반복 누름은 무시한다)
 //   Holding ──놓음, 칸 위──────────────> 실행 → 숨음
 //   Holding ──놓음, 가운데, 220 ms 안──> Open
 //   Holding ──놓음, 가운데, 그 뒤──────> 숨음
@@ -29,7 +30,7 @@ use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_global_shortcut::Shortcut;
 
 use super::geometry::{self, OUTER_RADIUS, Rect};
-use super::model::{MAX_DEPTH, Refusal, Ring, RingAction, Slot};
+use super::model::{MAX_DEPTH, Refusal, Ring, RingAction, ShortcutKind, Slot};
 use super::{actions, platform};
 use crate::constants::{events, window_labels};
 use crate::ui::ring_window;
@@ -83,6 +84,9 @@ struct Session {
 	confirm: Option<Slot>,
 	/// 누르고 있는 동안 OS 가 되풀이해 보낸 누름의 수. 놓을 때 로그에 남긴다.
 	repeat_presses: u32,
+	/// 일반 단축키로 띄웠고 그 키를 아직 떼지 않았다. 그동안 오는 누름은 OS 의 되풀이다 — 닫지 않는다.
+	/// plugin 의 `Released` 나 polling 이 읽은 키 상태로 내려간다.
+	trigger_down: bool,
 	/// 키보드를 끝까지 받지 않는다. 개발용 확인에서만 켠다 — 맨 앞 앱의 입력을 가져가지 않는다.
 	quiet: bool,
 }
@@ -385,34 +389,66 @@ fn on_main(app: &AppHandle, f: impl FnOnce(&AppHandle) + Send + 'static) {
 
 // ── 띄우기 ─────────────────────────────────────────────────────────────
 
+/// 누른 순간에 떠 있던 링.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct Showing {
+	/// 같은 링의 단축키로 띄운 링인가 (일반·빠른 어느 쪽이든).
+	same_ring: bool,
+	mode: Mode,
+	trigger_down: bool,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum PressOutcome {
+	/// 누르고 있는 키의 되풀이다.
+	Ignore,
+	/// 남아 있는 링에서 같은 링의 단축키는 닫기다.
+	Close,
+	/// 다른 링이 떠 있다. 닫고 이 링을 띄운다.
+	Replace,
+	Open,
+}
+
+fn decide_press(showing: Option<Showing>) -> PressOutcome {
+	match showing {
+		None => PressOutcome::Open,
+		Some(s) if !s.same_ring => PressOutcome::Replace,
+		Some(s) if s.mode == Mode::Holding || s.trigger_down => PressOutcome::Ignore,
+		Some(_) => PressOutcome::Close,
+	}
+}
+
 /// 전역 단축키를 눌렀다. main thread 에서 온다.
 ///
+/// 빠른 단축키는 hold 로, 일반 단축키는 남아 있는 링(Open)으로 띄운다.
 /// 누르고 있는 동안 OS 가 누름을 되풀이해 보내도 안전하다 — 이미 떠 있으면 새로 띄우지 않는다.
-pub fn pressed(app: &AppHandle, ring_id: &str, shortcut: Shortcut) {
+pub fn pressed(app: &AppHandle, ring_id: &str, kind: ShortcutKind, shortcut: Shortcut) {
 	let pressed_at = Instant::now();
 	let showing = {
 		let mut guard = session();
 		guard.as_mut().map(|current| {
-			let same = current
+			let same_ring = current
 				.trigger
 				.as_ref()
 				.is_some_and(|(id, _)| id == ring_id);
-			if same && current.mode == Mode::Holding {
+			if same_ring && (current.mode == Mode::Holding || current.trigger_down) {
 				current.repeat_presses += 1;
 			}
-			(same, current.mode)
+			Showing {
+				same_ring,
+				mode: current.mode,
+				trigger_down: current.trigger_down,
+			}
 		})
 	};
-	match showing {
-		Some((true, Mode::Holding)) => return,
-		Some((true, _)) => {
-			// 남아 있는 링에서 같은 단축키는 닫기다.
+	match decide_press(showing) {
+		PressOutcome::Ignore => return,
+		PressOutcome::Close => {
 			hide(app);
 			return;
 		}
-		// 다른 링이 떠 있다. 닫고 이 링을 띄운다.
-		Some((false, _)) => hide(app),
-		None => {}
+		PressOutcome::Replace => hide(app),
+		PressOutcome::Open => {}
 	}
 	let Some(ring) = find_ring(ring_id) else {
 		log::warn!("[ring] the shortcut's ring {ring_id} is gone");
@@ -428,22 +464,40 @@ pub fn pressed(app: &AppHandle, ring_id: &str, shortcut: Shortcut) {
 			"[ring] key state is not readable — waiting for the shortcut's release event only"
 		);
 	}
+	let mode = match kind {
+		ShortcutKind::Normal => Mode::Open,
+		ShortcutKind::Quick => Mode::Holding,
+	};
 	open_session(
 		app,
 		ring,
-		Mode::Holding,
+		mode,
 		Some((ring_id.to_string(), shortcut)),
 		key_state_usable,
 		None,
 	);
 	log::info!(
-		"[ring] shown {:.1} ms after the press (ring {ring_id})",
+		"[ring] shown {:.1} ms after the press (ring {ring_id}, {kind:?} shortcut)",
 		pressed_at.elapsed().as_secs_f64() * 1000.0
 	);
 }
 
 /// 전역 단축키를 놓았다. main thread 에서 온다.
-pub fn released(app: &AppHandle, ring_id: &str) {
+///
+/// 일반 단축키를 떼면 아무것도 실행하지 않는다 — 떼었다는 것만 적는다. 빠른 단축키를 떼면 hold 가 끝난다.
+pub fn released(app: &AppHandle, ring_id: &str, kind: ShortcutKind) {
+	if kind == ShortcutKind::Normal {
+		if let Some(current) = session().as_mut() {
+			let same_ring = current
+				.trigger
+				.as_ref()
+				.is_some_and(|(id, _)| id == ring_id);
+			if same_ring {
+				current.trigger_down = false;
+			}
+		}
+		return;
+	}
 	let generation = match session().as_ref() {
 		Some(current)
 			if current.mode == Mode::Holding
@@ -503,6 +557,7 @@ fn open_session(
 		}
 	};
 	let generation = GENERATION.fetch_add(1, Ordering::Relaxed) + 1;
+	let trigger_down = mode == Mode::Open && trigger.is_some();
 	let new = Session {
 		generation,
 		mode,
@@ -516,6 +571,7 @@ fn open_session(
 		arm_origin,
 		confirm: None,
 		repeat_presses: 0,
+		trigger_down,
 		quiet: fixed.is_some_and(|(_, take_key)| !take_key),
 	};
 	let show = payload(&new);
@@ -541,6 +597,16 @@ enum Tick {
 
 fn tick(current: &mut Session) -> Tick {
 	let cursor = platform::cursor();
+	// 일반 단축키를 뗐는가. plugin 의 `Released` 가 수식키를 먼저 뗀 경우를 놓칠 수 있어 키 상태도 본다.
+	if current.trigger_down
+		&& current.key_state_usable
+		&& current
+			.trigger
+			.as_ref()
+			.is_some_and(|(_, shortcut)| !platform::combo_held(shortcut))
+	{
+		current.trigger_down = false;
+	}
 	if current.mode == Mode::Holding {
 		if current.started.elapsed() > HOLD_TIMEOUT {
 			return Tick::TimedOut;
@@ -1048,6 +1114,59 @@ mod tests {
 			decide_release(5.0, -5.0, &FILLED, LONG),
 			ReleaseOutcome::Cancel
 		);
+	}
+
+	fn showing(same_ring: bool, mode: Mode, trigger_down: bool) -> Option<Showing> {
+		Some(Showing {
+			same_ring,
+			mode,
+			trigger_down,
+		})
+	}
+
+	#[test]
+	fn a_press_with_nothing_shown_opens_the_ring() {
+		assert_eq!(decide_press(None), PressOutcome::Open);
+	}
+
+	#[test]
+	fn repeated_presses_of_a_held_key_are_ignored() {
+		// 빠른 단축키를 누르고 있다.
+		assert_eq!(
+			decide_press(showing(true, Mode::Holding, false)),
+			PressOutcome::Ignore
+		);
+		// 일반 단축키를 누르고 있다 — 링은 남아 있는 상태지만 키를 아직 떼지 않았다.
+		assert_eq!(
+			decide_press(showing(true, Mode::Open, true)),
+			PressOutcome::Ignore
+		);
+		assert_eq!(
+			decide_press(showing(true, Mode::Confirming, true)),
+			PressOutcome::Ignore
+		);
+	}
+
+	#[test]
+	fn pressing_the_same_ring_again_after_the_release_closes_it() {
+		assert_eq!(
+			decide_press(showing(true, Mode::Open, false)),
+			PressOutcome::Close
+		);
+		assert_eq!(
+			decide_press(showing(true, Mode::Confirming, false)),
+			PressOutcome::Close
+		);
+	}
+
+	#[test]
+	fn another_ring_replaces_the_shown_one() {
+		for mode in [Mode::Holding, Mode::Open, Mode::Confirming] {
+			assert_eq!(
+				decide_press(showing(false, mode, true)),
+				PressOutcome::Replace
+			);
+		}
 	}
 
 	#[test]

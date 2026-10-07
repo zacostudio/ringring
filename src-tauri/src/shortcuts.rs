@@ -340,7 +340,7 @@ impl Registrar for Os<'_> {
 	}
 
 	/// 링 하나의 조합을 건다. 누름과 놓음을 둘 다 controller 로 넘긴다.
-	fn register(&mut self, ring_id: &str, _kind: ShortcutKind, combo: &str) -> Result<(), String> {
+	fn register(&mut self, ring_id: &str, kind: ShortcutKind, combo: &str) -> Result<(), String> {
 		let shortcut = combo
 			.parse::<Shortcut>()
 			.map_err(|e| format!("Invalid shortcut '{combo}': {e}"))?;
@@ -348,8 +348,8 @@ impl Registrar for Os<'_> {
 		self.0
 			.global_shortcut()
 			.on_shortcut(shortcut, move |app, shortcut, event| match event.state {
-				ShortcutState::Pressed => controller::pressed(app, &ring_id, *shortcut),
-				ShortcutState::Released => controller::released(app, &ring_id),
+				ShortcutState::Pressed => controller::pressed(app, &ring_id, kind, *shortcut),
+				ShortcutState::Released => controller::released(app, &ring_id, kind),
 			})
 			.map_err(|e| e.to_string())
 	}
